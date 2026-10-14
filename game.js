@@ -1,120 +1,111 @@
-import { randomUUID, randomInt } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { CONFIG as C } from './config.js';
-
-export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-export function intersects(x, y, r, rect) {
-  return Math.hypot(x - clamp(x, rect.x, rect.x + rect.w), y - clamp(y, rect.y, rect.y + rect.h)) < r;
-}
-export function createMap(seed = randomInt(1, 2147483646)) {
-  let value = seed;
-  const rand = () => ((value = (value * 16807) % 2147483647) - 1) / 2147483646;
-  const walls = [], pallets = [], bushes = [], cabinets = [], cages = [];
-  // Open lanes separate compounds; all objectives are placed in reachable lanes.
-  for (let row = 0; row < 4; row++) for (let col = 0; col < 5; col++) {
-    const x = 330 + col * 570, y = 250 + row * 510;
-    walls.push({ x, y, w: 135, h: 28 }, { x: x + 210, y, w: 130, h: 28 }, { x, y: y + 28, w: 28, h: 145 });
-    pallets.push({ id: `p${pallets.length}`, x: x + 135, y, w: 75, h: 28, state: 'ready', breakProgress: 0 });
-    bushes.push({ x: x + 120, y: y + 190, w: 150, h: 95 });
-    cabinets.push({ id: `h${cabinets.length}`, x: x + 315, y: y + 90, occupant: null });
-  }
-  const generators = [ {x: 220,y:650}, {x:1100,y:450}, {x:2200,y:450}, {x:1100,y:1850}, {x:2800,y:1900} ].map((p,i)=>({...p,id:`g${i}`,progress:0}));
-  for (const [x,y] of [[650,900],[1650,900],[2700,900],[650,2100],[2100,2100]]) cages.push({ id:`c${cages.length}`,x,y,occupant:null,rescueProgress:0 });
-  const horizontal = rand() > .5;
-  const exits = horizontal ? [{x:55,y:C.mapHeight/2},{x:C.mapWidth-55,y:C.mapHeight/2}] : [{x:C.mapWidth/2,y:55},{x:C.mapWidth/2,y:C.mapHeight-55}];
-  return { seed, width:C.mapWidth,height:C.mapHeight,walls,pallets,bushes,cabinets,cages,generators,exits:exits.map((e,i)=>({...e,id:`e${i}`})) };
-}
+import { createMap } from './map.js';
+export { createMap } from './map.js';
+export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+export function intersects(x,y,r,w){return Math.hypot(x-clamp(x,w.x,w.x+w.w),y-clamp(y,w.y,w.y+w.h))<r;}
+export function lineOfSight(map,a,b){const steps=Math.ceil(distance(a,b)/10);for(let i=1;i<steps;i++){const x=a.x+(b.x-a.x)*i/steps,y=a.y+(b.y-a.y)*i/steps;if(map.walls.some(w=>x>=w.x&&x<=w.x+w.w&&y>=w.y&&y<=w.y+w.h))return false;}return true;}
+export const PERKS={engineer:{role:'survivor',name:'정비 숙련',description:'수리 속도 +5%'},medic:{role:'survivor',name:'응급 처치',description:'치료 속도 +15%'},sprinter:{role:'survivor',name:'생존 본능',description:'달리기 시작 시 3초간 +50%, 탈진 40초'},breaker:{role:'killer',name:'철거 숙련',description:'파레트 파괴 속도 +15%'},tracker:{role:'killer',name:'끈질긴 추적',description:'달리기 흔적 수명 +4초'},patrol:{role:'killer',name:'야간 순찰',description:'갈고리에 건 뒤 8초간 이동 +10%'}};
+const idle=()=>({x:0,y:0,space:false,work:false,run:false,crouch:false,attack:false,item:false,self:false,drop:false,aimX:1,aimY:0});
+const active=p=>!['out','escaped'].includes(p.status);
+const has=(p,key)=>p.perks.includes(key);
 export class Room {
-  constructor(code, name, maxPlayers = C.defaultPlayers) {
-    this.code=code; this.name=name; this.maxPlayers=clamp(maxPlayers,3,C.maxPlayers); this.players=new Map();
-    this.hostId=null; this.phase='lobby'; this.map=createMap(); this.events=[]; this.elapsed=0; this.result=null; this.updatedAt=Date.now();
-  }
-  addPlayer(name) {
-    if(this.phase!=='lobby') throw new Error('이미 시작된 방입니다.');
-    if(this.players.size>=this.maxPlayers) throw new Error('방이 가득 찼습니다.');
-    const id=randomUUID();
-    const p={id,name,role:this.players.size===0?'killer':'survivor',x:0,y:0,status:'alive',cageCount:0,connected:true,disconnectTime:0,stun:0,immunity:0,carrying:null,hidden:null,action:null,input:{x:0,y:0,space:false},wasSpace:false,spectateId:null};
-    this.players.set(id,p); this.hostId??=id; this.updatedAt=Date.now(); return p;
-  }
-  setRole(id,role) {
-    if(this.phase!=='lobby') return;
-    const p=this.players.get(id); if(!p || !['killer','survivor'].includes(role)) return;
-    if(role==='killer') for(const q of this.players.values()) if(q.role==='killer') q.role='survivor';
-    p.role=role;
-  }
-  start(id) {
-    if(id!==this.hostId) throw new Error('방장만 게임을 시작할 수 있습니다.');
-    if(this.phase!=='lobby') throw new Error('게임이 이미 진행 중입니다.');
-    const roster=[...this.players.values()];
-    if(roster.filter(p=>p.role==='killer'&&p.connected).length!==1) throw new Error('살인마는 정확히 1명이어야 합니다.');
-    if(roster.filter(p=>p.role==='survivor'&&p.connected).length<C.minSurvivors) throw new Error('도망자는 최소 2명이 필요합니다.');
-    if(roster.some(p=>!p.connected)) throw new Error('접속이 끊긴 참가자가 있습니다.');
-    this.map=createMap(); this.phase='playing'; this.elapsed=0; this.result=null; this.events=[];
-    let n=0;
-    for(const p of roster) {
-      const killer=p.role==='killer'; Object.assign(p,{x:killer?1600:140+(n%5)*570,y:killer?1200:350+Math.floor(n/5)*510,status:'alive',cageCount:0,stun:0,immunity:0,carrying:null,hidden:null,action:null,wasSpace:false,input:{x:0,y:0,space:false}}); if(!killer)n++;
+  constructor(code,name,maxPlayers=C.defaultPlayers){this.code=code;this.name=name;this.maxPlayers=clamp(maxPlayers,3,C.maxPlayers);this.players=new Map();this.hostId=null;this.phase='lobby';this.map=createMap();this.events=[];this.elapsed=0;this.result=null;this.updatedAt=Date.now();this.generatorGoal=C.generatorGoal;this.endgame=null;this.traces=[];this.noises=[];}
+  fresh(){return {status:'alive',health:2,cageCount:0,hookStage:0,hookTime:0,resolve:0,campTime:0,disconnectTime:0,stun:0,immunity:0,deepWound:0,mend:0,hitBoost:0,exhaustion:0,sprintBoost:0,patrolBoost:0,carrying:null,hidden:null,action:null,task:null,input:idle(),previous:idle(),pendingPress:new Set(),skill:null,nextSkill:6+Math.random()*8,wiggle:0,wiggleActive:false,recovery:0,bleed:0,cooldown:0,attackTimer:0,swing:0,flashBlind:0,blindProgress:0,selfAttempts:0,bloodlust:0,chaseTime:0,vault:null,vaultCounts:{},facing:{x:1,y:0},spectateId:null,traceTimer:0,healProgress:0,hookedAt:null};}
+  addPlayer(name){if(this.phase!=='lobby')throw new Error('이미 시작된 방입니다.');if(this.players.size>=this.maxPlayers)throw new Error('방이 가득 찼습니다.');const p={id:randomUUID(),name,role:this.players.size?'survivor':'killer',x:0,y:0,connected:true,perks:[],itemType:'medkit',itemCharge:24,...this.fresh()};this.players.set(p.id,p);this.hostId??=p.id;return p;}
+  setRole(id,role){if(this.phase!=='lobby')return;const p=this.players.get(id);if(!p||!['killer','survivor'].includes(role))return;if(role==='killer')for(const q of this.players.values())if(q.role==='killer'){q.role='survivor';q.perks=[];}p.role=role;p.perks=[];}
+  loadout(id,data){if(this.phase!=='lobby')throw new Error('대기실에서만 장비를 바꿀 수 있습니다.');const p=this.players.get(id);if(!p)return;const perks=data?.perks;if(!Array.isArray(perks)||perks.length>4||new Set(perks).size!==perks.length||perks.some(k=>PERKS[k]?.role!==p.role))throw new Error('역할에 맞는 특전을 최대 4개 선택하세요.');if(!['medkit','toolbox','flashlight','none'].includes(data?.item))throw new Error('아이템을 확인해주세요.');p.perks=[...perks];p.itemType=p.role==='survivor'?data.item:'none';}
+  start(id){if(id!==this.hostId)throw new Error('방장만 게임을 시작할 수 있습니다.');if(this.phase!=='lobby')throw new Error('게임이 이미 진행 중입니다.');const list=[...this.players.values()];if(list.filter(p=>p.role==='killer'&&p.connected).length!==1)throw new Error('살인마는 정확히 1명이어야 합니다.');const n=list.filter(p=>p.role==='survivor').length;if(n<C.minSurvivors)throw new Error('생존자는 최소 2명이 필요합니다.');if(list.some(p=>!p.connected))throw new Error('접속이 끊긴 참가자가 있습니다.');this.map=createMap();this.generatorGoal=n<4?n+1:5;this.map.generators=this.map.generators.slice(0,n<4?n+3:C.generatorCount);this.phase='playing';this.elapsed=0;this.events=[];this.result=null;this.endgame=null;this.traces=[];this.noises=[];let i=0;for(const p of list){const spawn=p.role==='killer'?{x:2900,y:2170}:this.map.spawns[i++%this.map.spawns.length];Object.assign(p,this.fresh(),spawn,{itemCharge:p.role==='killer'?0:p.itemType==='toolbox'?32:p.itemType==='flashlight'?8:24,itemType:p.role==='killer'?'none':p.itemType});}this.event(`추격 시작 · 발전기 ${this.generatorGoal}개를 수리하세요.`);}
+  event(text){this.events.push({id:randomUUID(),text,time:this.elapsed});this.events=this.events.slice(-8);}
+  noise(p,text){this.noises.push({id:randomUUID(),x:p.x,y:p.y,text,expires:this.elapsed+5});}
+  powered(){return this.map.generators.filter(g=>g.progress>=C.generatorSeconds).length>=this.generatorGoal;}
+  near(p,list,r=C.interactionRadius){return list.filter(o=>distance(p,{x:o.x+(o.w||0)/2,y:o.y+(o.h||0)/2})<r&&lineOfSight(this.map,p,{x:o.x+(o.w||0)/2,y:o.y+(o.h||0)/2})).sort((a,b)=>distance(p,a)-distance(p,b))[0];}
+  free(x,y,r=C.playerRadius){return x>=r&&y>=r&&x<=this.map.width-r&&y<=this.map.height-r&&!this.map.walls.some(w=>intersects(x,y,r,w));}
+  conspicuous(p){p.immunity=0;}
+  dropCarried(k,escape=false){const p=this.players.get(k.carrying);if(p){p.status=escape?'alive':'down';p.health=escape?1:0;p.wiggle=0;p.wiggleActive=false;p.skill=null;p.x=k.x-35*k.facing.x;p.y=k.y-35*k.facing.y;if(!this.free(p.x,p.y)){p.x=k.x;p.y=k.y;}if(escape)k.stun=3;}k.carrying=null;}
+  eliminate(p,reason){if(!active(p))return;if(p.carrying)this.dropCarried(p);for(const k of this.players.values())if(k.carrying===p.id)k.carrying=null;for(const h of this.map.cages)if(h.occupant===p.id){h.occupant=null;h.rescueProgress=0;h.availableUntil=this.elapsed+60;}for(const l of this.map.cabinets)if(l.occupant===p.id)l.occupant=null;p.hidden=null;p.status='out';p.skill=null;p.vault=null;this.event(`${p.name} · ${reason}`);}
+  damage(p){if(p.status!=='alive'||p.hidden)return false;if(p.immunity>0&&p.health===1&&!p.deepWound){p.deepWound=20;p.immunity=0;p.hitBoost=1.8;return true;}p.health--;p.hitBoost=1.8;p.recovery=0;p.healProgress=0;p.action=null;p.task=null;p.skill=null;if(p.health<=0){p.health=0;p.status='down';p.deepWound=0;p.hitBoost=0;this.event(`${p.name} 빈사 상태`);}else this.noise(p,'비명');return true;}
+  attack(k){if(k.carrying||k.task||k.stun||k.cooldown||k.vault||k.status!=='alive')return;k.attackTimer=.18;k.swing=.35;k.cooldown=C.attackMissCooldown;}
+  resolveAttack(k){if(k.carrying||k.task||k.stun||k.vault)return;const candidates=[...this.players.values()].filter(p=>p.role==='survivor'&&p.status==='alive'&&!p.hidden&&distance(k,p)<=C.attackRange&&lineOfSight(this.map,k,p)).sort((a,b)=>distance(k,a)-distance(k,b));for(const p of candidates){const d=Math.max(1,distance(k,p));if((distance(k,p)<20||((p.x-k.x)*k.facing.x+(p.y-k.y)*k.facing.y)/d>=.45)&&!this.map.pallets.some(q=>q.state==='dropped'&&segmentRect(k,p,q))){if(p.vault&&p.health===1){p.vault=null;p.status='carried';p.health=0;p.wiggle=0;k.carrying=p.id;k.cooldown=C.attackCooldown;}else if(this.damage(p)){k.cooldown=C.attackCooldown;k.chaseTime=0;k.bloodlust=0;}break;}}}
+  move(p,dt){if(!['alive','down'].includes(p.status)||p.stun||p.hidden||p.vault||p.task&&(p.input.work||p.input.space||p.input.self))return;let {x,y}=p.input;const len=Math.hypot(x,y);if(len>1){x/=len;y/=len;}if(!len)return;const killer=p.role==='killer';let speed=killer?C.survivorSpeed*C.killerSpeedMultiplier:(p.status==='down'?28:p.input.crouch?C.crouchSpeed:p.input.run?C.survivorSpeed:C.walkSpeed);if(killer&&p.carrying)speed=C.survivorSpeed*.92;if(killer&&p.cooldown>0)speed*=.65;if(killer&&p.bloodlust)speed+=p.bloodlust*8.5;if(p.hitBoost>0)speed*=1.5;if(p.sprintBoost>0)speed*=1.5;if(p.immunity>0&&p.role==='survivor')speed*=1.1;if(p.patrolBoost>0)speed*=1.1;const blockers=[...this.map.walls,...this.map.windows,...this.map.pallets.filter(q=>q.state==='dropped')];const dx=x*speed*dt,dy=y*speed*dt,steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/10));for(let i=0;i<steps;i++){const nx=clamp(p.x+dx/steps,C.playerRadius,this.map.width-C.playerRadius),ny=clamp(p.y+dy/steps,C.playerRadius,this.map.height-C.playerRadius);if(!blockers.some(w=>intersects(nx,p.y,C.playerRadius,w)))p.x=nx;if(!blockers.some(w=>intersects(p.x,ny,C.playerRadius,w)))p.y=ny;}if(!killer)p.facing={x:x/Math.hypot(x,y),y:y/Math.hypot(x,y)};if(!killer&&p.status==='alive'&&p.input.run&&!p.input.crouch){p.traceTimer+=dt;if(p.traceTimer>=.22){p.traceTimer=0;const k=[...this.players.values()].find(q=>q.role==='killer');this.traces.push({x:p.x,y:p.y,type:'scratch',expires:this.elapsed+7+(has(k,'tracker')?4:0)});}}if(p.health===1&&!p.immunity){p.traceTimer+=dt;if(p.traceTimer>=.5){p.traceTimer=0;this.traces.push({x:p.x,y:p.y,type:'blood',expires:this.elapsed+10});}}}
+  beginSkill(p,type,target){if(p.skill)return;p.skill={type,target,start:this.elapsed+.65,duration:1.2,good:type==='wiggle'?[.2,.9]:[.52,.8],great:[.68,.73]};}
+  skill(p){const s=p.skill;if(!s)return;const t=(this.elapsed-s.start)/s.duration,good=t>=s.good[0]&&t<=s.good[1],great=t>=s.great[0]&&t<=s.great[1];if(s.type==='repair'){const g=this.map.generators.find(g=>g.id===s.target);if(g&&distance(p,g)<C.interactionRadius&&lineOfSight(this.map,p,g)){if(good&&great)g.progress=clamp(g.progress+.9,0,C.generatorSeconds);if(!good){g.progress=Math.max(0,g.progress-9);p.cooldown=1;this.noise(g,'발전기 폭발');}}}if(s.type==='heal'&&!good){p.cooldown=1;const target=this.players.get(s.target);if(target){if(target.status==='down')target.recovery=Math.max(0,target.recovery-.1);else target.healProgress=Math.max(0,target.healProgress-.1);}this.noise(p,'치료 실패');}if(s.type==='hook'&&!good)p.hookTime-=10;p.skill=null;p.nextSkill=6+Math.random()*7;}
+  vault(p,o){if(p.vault||p.stun||p.carrying)return;const window=this.map.windows.includes(o),entry=p.vaultCounts[o.id]||{count:0,blockedUntil:0};if(window&&entry.blockedUntil>this.elapsed){p.action={label:'창문이 봉쇄되었습니다',progress:0};return;}const cx=o.x+o.w/2,cy=o.y+o.h/2,vertical=o.axis==='x',side=vertical?(p.x<cx?-1:1):(p.y<cy?-1:1);const x=vertical?cx-side*(o.w/2+26):cx,y=vertical?cy:cy-side*(o.h/2+26);if(!this.free(x,y))return;const seconds=p.role==='killer'?1.7:p.input.run?.5:1.5;p.vault={from:{x:p.x,y:p.y},to:{x,y},progress:0,seconds,id:o.id};if(p.role==='survivor'&&p.input.run)this.noise(p,'급하게 넘기');if(window&&p.role==='survivor'){const k=[...this.players.values()].find(q=>q.role==='killer');if(k&&distance(k,p)<500){entry.lastChase=this.elapsed;entry.count++;if(entry.count>=3){entry.blockedUntil=this.elapsed+30;entry.count=0;}p.vaultCounts[o.id]=entry;}}}
+  task(p,key,label,seconds,dt,complete){if(p.task?.key!==key)p.task={key,progress:0};p.task.progress+=dt;p.action={label,progress:p.task.progress/seconds};if(p.task.progress>=seconds){p.task=null;complete();}}
+  interact(p,dt,pressed){p.action=null;const keepTask=p.task;p.task=null;
+    if(p.skill&&['repair','heal'].includes(p.skill.type)&&!p.input.work&&!p.input.item){this.skill(p);}
+    if(!active(p)){if(pressed){const list=[...this.players.values()].filter(active);p.spectateId=list[(list.findIndex(q=>q.id===p.spectateId)+1)%list.length]?.id||null;}return;}
+    if(p.status==='carried'){p.action={label:'SPACE · 저항 스킬 체크',progress:p.wiggle/C.wiggleSeconds};return;}
+    if(p.status==='caged'){p.action={label:`갈고리 ${p.hookStage}단계 · ${Math.ceil(p.hookTime)}초 / 캠핑 방지 ${Math.floor(p.resolve*100)}%`,progress:p.resolve};if(p.input.self&&!p.previous.self){if(p.resolve>=1)this.unhook(p);else if(p.hookStage===1&&p.selfAttempts<3&&[...this.players.values()].filter(q=>q.role==='survivor'&&active(q)).length<=2){p.selfAttempts++;if(Math.random()<.04)this.unhook(p);else{p.hookTime-=20;this.event(`${p.name} 자력 구출 실패 · 20초 감소`);}}}return;}
+    if(p.status==='down'){if(!p.input.x&&!p.input.y&&p.recovery<.95)p.recovery=Math.min(.95,p.recovery+dt/32);p.action={label:`회복 ${Math.floor(p.recovery*100)}% · 동료의 도움이 필요합니다`,progress:p.recovery};return;}
+    if(p.stun||p.vault)return;
+    if(p.hidden){if(pressed){const l=this.map.cabinets.find(l=>l.id===p.hidden);if(l)l.occupant=null;p.hidden=null;this.noise(p,'캐비넷 나오기');}return;}
+    const working=p.input.work||p.input.space&&!p.skill;
+    if(p.role==='killer'){
+      if(p.input.self&&!p.carrying){const down=this.near(p,[...this.players.values()].filter(q=>q.role==='survivor'&&q.status==='down'),65);const others=[...this.players.values()].filter(q=>q.role==='survivor'&&q.id!==down?.id&&active(q));if(down&&(others.length===0||others.length===1&&others[0].status==='caged'&&others[0].hookStage===2)){p.task=keepTask;this.task(p,'mori','마지막 생존자 처형',3,dt,()=>{if(down.status==='down'){this.eliminate(down,'살인마 처형');for(const q of others)this.eliminate(q,'갈고리 희생');}});return;}}
+      if(p.input.drop&&!p.previous.drop&&p.carrying){this.dropCarried(p);return;}
+      if(!working)return;p.task=keepTask;
+      if(p.carrying){const h=this.near(p,this.map.cages.filter(h=>!h.occupant&&(h.availableUntil||0)<=this.elapsed));if(h)this.task(p,h.id,'갈고리에 걸기',1.5,dt,()=>{const q=this.players.get(p.carrying);p.carrying=null;q.cageCount++;q.hookStage++;q.hookTime=C.hookSeconds;q.hookedAt=this.elapsed;q.resolve=0;q.campTime=0;q.status='caged';q.health=1;q.wiggle=0;q.wiggleActive=false;q.recovery=0;q.healProgress=0;q.deepWound=0;q.skill=null;q.immunity=0;q.x=h.x;q.y=h.y;h.occupant=q.id;if(q.hookStage>=3)this.eliminate(q,'갈고리 희생');else this.event(`${q.name} 갈고리 ${q.hookStage}단계`);if(has(p,'patrol'))p.patrolBoost=8;});else p.task=null;return;}
+      const down=this.near(p,[...this.players.values()].filter(q=>q.status==='down'),65);if(down){this.task(p,down.id,'들어 올리기',2.5,dt,()=>{down.status='carried';down.health=0;down.wiggle=0;down.wiggleActive=false;down.skill=null;p.carrying=down.id;});return;}
+      const v=this.near(p,this.map.windows,62);if(v&&pressed){p.task=null;this.vault(p,v);return;}
+      const pallet=this.near(p,this.map.pallets.filter(o=>o.state==='dropped'),70);if(pallet){this.task(p,pallet.id,'파레트 파괴',C.breakPalletSeconds/(has(p,'breaker')?1.15:1),dt,()=>{pallet.state='broken';p.chaseTime=0;p.bloodlust=0;this.event('파레트가 파괴되었습니다.');});pallet.breakProgress=p.task?.progress||0;return;}
+      if(this.map.hatch.visible&&this.map.hatch.open&&distance(p,this.map.hatch)<65){this.task(p,'hatch','해치 닫기',.7,dt,()=>{this.map.hatch.open=false;this.startEndgame();this.event('해치가 닫혔습니다. 출구 스위치를 사용하세요.');});return;}
+      const g=this.near(p,this.map.generators.filter(g=>![...this.players.values()].some(q=>q.role==='survivor'&&q.status==='alive'&&!q.hidden&&(q.input.work||q.input.item&&q.itemType==='toolbox')&&distance(q,g)<C.interactionRadius)&&g.progress>0&&g.progress<C.generatorSeconds&&!g.regressing&&g.regressionCount<8&&!g.workers.length));if(g){this.task(p,g.id,'발전기 손상',C.kickSeconds,dt,()=>{g.progress=Math.max(0,g.progress-4.5);g.regressing=true;g.repairToStop=0;g.regressionCount++;});return;}
+      const l=this.near(p,this.map.cabinets,65);if(l){this.task(p,l.id,'캐비넷 수색',2,dt,()=>{if(l.occupant){const q=this.players.get(l.occupant);q.hidden=null;q.status='carried';q.health=0;q.wiggle=0;q.wiggleActive=false;p.carrying=q.id;l.occupant=null;this.event(`${q.name} 캐비넷에서 발각`);}});return;}
+      const e=this.near(p,this.map.exits,70);if(e&&this.powered()&&!this.endgame&&!e.open)this.task(p,e.id,'탈출구 열기',.75,dt,()=>{e.open=true;e.progress=C.gateSeconds;this.startEndgame();});else p.task=null;return;
     }
-    this.event('추격이 시작되었습니다. 발전기 5개를 가동하세요.');
-  }
-  event(text) { this.events.push({id:randomUUID(),text,time:this.elapsed}); this.events=this.events.slice(-8); }
-  move(p,dt) {
-    if(p.status!=='alive'||p.stun>0||p.hidden) return;
-    let {x,y}=p.input; const length=Math.hypot(x,y); if(length>1){x/=length;y/=length;}
-    const speed=C.survivorSpeed*(p.role==='killer'?C.killerSpeedMultiplier:1)*(p.carrying ? .8 : 1);
-    const blockers=[...this.map.walls,...(p.role==='killer'?this.map.pallets.filter(q=>q.state==='dropped'):[])];
-    const nx=clamp(p.x+x*speed*dt,C.playerRadius,this.map.width-C.playerRadius);
-    if(!blockers.some(w=>intersects(nx,p.y,C.playerRadius,w)))p.x=nx;
-    const ny=clamp(p.y+y*speed*dt,C.playerRadius,this.map.height-C.playerRadius);
-    if(!blockers.some(w=>intersects(p.x,ny,C.playerRadius,w)))p.y=ny;
-    if(p.carrying){const victim=this.players.get(p.carrying); if(victim){victim.x=p.x;victim.y=p.y+24;}}
-  }
-  near(p,list,r=C.interactionRadius) {return list.filter(q=>distance(p,{x:q.x+(q.w||0)/2,y:q.y+(q.h||0)/2})<r).sort((a,b)=>distance(p,a)-distance(p,b))[0];}
-  dropCarried(p) {if(p.carrying){const q=this.players.get(p.carrying);if(q)q.status='down';p.carrying=null;}}
-  interact(p,dt,pressed) {
-    p.action=null;
-    if(p.status==='out'||p.status==='escaped') {
-      if(pressed){const targets=[...this.players.values()].filter(q=>['alive','down','caged','carried'].includes(q.status));const index=targets.findIndex(q=>q.id===p.spectateId);p.spectateId=targets[(index+1)%targets.length]?.id??null;} return;
+    if(p.deepWound&&(working||p.input.item)){p.task=keepTask;this.task(p,'mend','깊은 상흔 치유',10,dt,()=>p.deepWound=0);return;}
+    if(pressed&&!p.skill){
+      const pal=this.near(p,this.map.pallets.filter(o=>o.state!=='broken'),65);if(pal){if(pal.state==='ready'){pal.state='dropped';const k=[...this.players.values()].find(q=>q.role==='killer'),center={x:pal.x+pal.w/2,y:pal.y+pal.h/2};if(k&&distance(k,center)<75){k.stun=C.stunSeconds;this.dropCarried(k,true);k.stun=C.stunSeconds;}}else this.vault(p,pal);return;}
+      const v=this.near(p,this.map.windows,65);if(v){this.vault(p,v);return;}
+      const l=this.near(p,this.map.cabinets.filter(l=>!l.occupant),55);if(l){l.occupant=p.id;p.hidden=l.id;p.x=l.x;p.y=l.y;if(p.input.run)this.noise(p,'급하게 숨기');return;}
     }
-    if(p.status!=='alive'||p.stun>0||!p.input.space)return;
-    if(p.hidden){if(pressed){const cabinet=this.map.cabinets.find(c=>c.id===p.hidden);if(cabinet)cabinet.occupant=null;p.hidden=null;}return;}
-    if(p.role==='killer') {
-      if(p.carrying){const cage=this.near(p,this.map.cages.filter(c=>!c.occupant));if(cage){p.action={label:'감옥에 가두기',progress:0};if(pressed){const q=this.players.get(p.carrying);q.cageCount++;q.x=cage.x;q.y=cage.y;q.status=q.cageCount>=2?'out':'caged';q.immunity=0;p.carrying=null;if(q.status==='caged')cage.occupant=q.id;this.event(`${q.name} ${q.status==='out'?'탈락 · 관전 모드로 전환': '감금 (1/2)'}`);}return;}return;}
-      const down=this.near(p,[...this.players.values()].filter(q=>q.status==='down'));
-      if(down){p.action={label:'들어 올리기',progress:0};if(pressed){down.status='carried';p.carrying=down.id;}return;}
-      const pallet=this.near(p,this.map.pallets.filter(q=>q.state==='dropped'));
-      if(pallet){pallet.breakProgress+=dt;p.action={label:'파레트 부수기',progress:pallet.breakProgress/C.breakPalletSeconds};if(pallet.breakProgress>=C.breakPalletSeconds){pallet.state='broken';this.event('살인마가 파레트를 부쉈습니다.');}return;}
-      const cabinet=this.near(p,this.map.cabinets);
-      if(cabinet&&pressed&&cabinet.occupant){const q=this.players.get(cabinet.occupant);q.hidden=null;q.status='down';cabinet.occupant=null;this.event(`${q.name} 캐비넷에서 발각`);} return;
-    }
-    const cage=this.near(p,this.map.cages.filter(c=>c.occupant));
-    if(cage){cage.rescuers??=[];cage.rescuers.push(p.id);p.action={label:'동료 구출',progress:cage.rescueProgress/C.rescueSeconds};return;}
-    const pallet=this.near(p,this.map.pallets.filter(q=>q.state==='ready'),75);
-    if(pallet){p.action={label:'파레트 내리기',progress:0};if(pressed){pallet.state='dropped';const center={x:pallet.x+pallet.w/2,y:pallet.y+pallet.h/2};for(const killer of this.players.values())if(killer.role==='killer'&&distance(killer,center)<130){killer.stun=C.stunSeconds;this.dropCarried(killer);this.event('파레트 적중! 살인마 2초 기절');}}return;}
-    const generator=this.near(p,this.map.generators.filter(g=>g.progress<C.generatorSeconds));
-    if(generator){generator.workers??=[];generator.workers.push(p.id);p.action={label:'발전기 수리',progress:generator.progress/C.generatorSeconds};return;}
-    const cabinet=this.near(p,this.map.cabinets.filter(c=>!c.occupant),65);
-    if(cabinet){p.action={label:'캐비넷 숨기',progress:0};if(pressed){cabinet.occupant=p.id;p.hidden=cabinet.id;p.x=cabinet.x;p.y=cabinet.y;}}
+    if(!working&&!p.input.item)return;
+    const h=this.near(p,this.map.cages.filter(h=>h.occupant));if(h&&working){this.conspicuous(p);h.rescuers.push(p.id);p.action={label:'동료 구출',progress:h.rescueProgress/C.rescueSeconds};return;}
+    const friend=this.near(p,[...this.players.values()].filter(q=>q.id!==p.id&&q.role==='survivor'&&((q.status==='alive'&&q.health===1)||q.status==='down')&&!q.hidden&&!q.vault),55);
+    if(friend&&working){if(p.cooldown)return;this.conspicuous(p);if(friend.deepWound)friend.receivingMend=true;p.action={label:friend.deepWound?'동료 상흔 치유':'동료 치료',progress:friend.status==='down'?friend.recovery:friend.healProgress||0};friend.healers.push(p.id);if(p.nextSkill<=0&&!friend.deepWound)this.beginSkill(p,'heal',friend.id);return;}
+    if(p.input.item&&p.itemType==='medkit'&&p.health===1&&p.itemCharge>0){if(p.cooldown)return;this.conspicuous(p);if(p.nextSkill<=0)this.beginSkill(p,'heal',p.id);const rate=(has(p,'medic')?1.15:1)/24;p.healProgress+=rate*dt;p.itemCharge=Math.max(0,p.itemCharge-dt);p.action={label:'구급상자 자기 치료',progress:p.healProgress};if(p.healProgress>=1-1e-8){p.health=2;p.healProgress=0;}return;}
+    if(p.input.item&&p.itemType==='flashlight'&&p.itemCharge>0){p.itemCharge=Math.max(0,p.itemCharge-dt);p.flashlight=true;const k=[...this.players.values()].find(q=>q.role==='killer');if(k&&distance(p,k)<270&&lineOfSight(this.map,p,k)){const d=Math.max(1,distance(p,k));if(((k.x-p.x)*p.input.aimX+(k.y-p.y)*p.input.aimY)/d>.92&&(k.facing.x*(p.x-k.x)+k.facing.y*(p.y-k.y))/d>.3){k.blindProgress=(k.blindProgress||0)+dt;if(k.blindProgress>=1){k.flashBlind=2;this.dropCarried(k,true);k.blindProgress=0;}}}return;}
+    const g=this.near(p,this.map.generators.filter(g=>g.progress<C.generatorSeconds));if(g&&!this.powered()&&this.endgame===null&&(working||p.input.item&&p.itemType==='toolbox')){if(p.cooldown)return;this.conspicuous(p);g.workers.push(p.id);p.action={label:'발전기 수리',progress:g.progress/C.generatorSeconds};if(p.nextSkill<=0)this.beginSkill(p,'repair',g.id);return;}
+    const e=this.near(p,this.map.exits,70);if(e&&(this.powered()||this.endgame!==null)&&!e.open&&working){this.conspicuous(p);e.workers.push(p.id);p.action={label:'탈출구 개방',progress:e.progress/C.gateSeconds};return;}
+    const ch=this.near(p,this.map.chests.filter(ch=>!ch.opened),60);if(ch&&working){this.conspicuous(p);p.task=keepTask;this.task(p,ch.id,'상자 열기',10,dt,()=>{ch.opened=true;p.itemType=ch.item;p.itemCharge=ch.item==='toolbox'?32:ch.item==='flashlight'?8:24;});}
   }
-  tick(dt) {
-    if(this.phase!=='playing')return; this.elapsed+=dt;
-    for(const g of this.map.generators)g.workers=[];
-    for(const c of this.map.cages)c.rescuers=[];
-    for(const p of this.players.values()) {
-      if(!p.connected){p.disconnectTime+=dt;if(p.disconnectTime>=C.disconnectGraceSeconds&& !['out','escaped'].includes(p.status)){this.dropCarried(p);p.status='out';for(const carrier of this.players.values())if(carrier.carrying===p.id)carrier.carrying=null;if(p.hidden){const h=this.map.cabinets.find(h=>h.id===p.hidden);if(h)h.occupant=null;p.hidden=null;}for(const c of this.map.cages)if(c.occupant===p.id)c.occupant=null;this.event(`${p.name} 연결 종료로 탈락`);}p.input={x:0,y:0,space:false};}
-      p.stun=Math.max(0,p.stun-dt);p.immunity=Math.max(0,p.immunity-dt);this.move(p,dt);
+  unhook(p){const h=this.map.cages.find(h=>h.occupant===p.id);if(h){h.occupant=null;h.rescueProgress=0;}p.status='alive';p.health=1;p.recovery=0;p.healProgress=0;p.deepWound=0;p.skill=null;p.immunity=C.releaseImmunitySeconds;p.resolve=0;p.x+=45;p.exhaustion=0;this.event(`${p.name} 구출 완료`);}
+  startEndgame(){this.endgame??=C.endgameSeconds;}
+  tick(dt){if(this.phase!=='playing')return;this.elapsed+=dt;for(const g of this.map.generators)g.workers=[];for(const h of this.map.cages)h.rescuers=[];for(const e of this.map.exits)e.workers=[];for(const p of this.players.values()){p.healers=[];p.mending=p.receivingMend||p.task?.key==='mend';p.receivingMend=false;}const k=[...this.players.values()].find(p=>p.role==='killer');
+    const skillConsumed=new Set(),held=new Map();for(const p of this.players.values()){held.set(p.id,p.input);if(p.pendingPress.size){p.input={...p.input};for(const key of p.pendingPress)p.input[key]=true;p.pendingPress.clear();}}
+    for(const p of this.players.values()){
+      if(!p.connected){p.disconnectTime+=dt;p.input=idle();if(p.disconnectTime>=C.disconnectGraceSeconds)this.eliminate(p,'연결 종료');}
+      if(!active(p))continue;
+      for(const key of ['stun','immunity','hitBoost','sprintBoost','patrolBoost','cooldown','swing','flashBlind'])p[key]=Math.max(0,p[key]-dt);p.flashlight=false;if(p.role==='killer')p.blindProgress=Math.max(0,p.blindProgress-dt*.5);if(p.role==='survivor'&&p.input.item&&p.itemType==='flashlight')p.facing={x:p.input.aimX??1,y:p.input.aimY??0};
+      for(const entry of Object.values(p.vaultCounts))if(entry.lastChase&&this.elapsed-entry.lastChase>5&&(!k||distance(k,p)>500))entry.count=0;
+      if(!p.input.run)p.exhaustion=Math.max(0,p.exhaustion-dt);
+      if(p.role==='killer'){const chasing=[...this.players.values()].some(q=>q.role==='survivor'&&q.status==='alive'&&!q.hidden&&distance(p,q)<450&&lineOfSight(this.map,p,q));p.chaseTime=chasing?p.chaseTime+dt:0;p.bloodlust=p.chaseTime>=35?3:p.chaseTime>=25?2:p.chaseTime>=15?1:0;const len=Math.hypot(p.input.aimX??1,p.input.aimY??0);if(len)p.facing={x:p.input.aimX/len,y:p.input.aimY/len};if(p.input.attack&&!p.previous.attack)this.attack(p);if(p.attackTimer>0){p.attackTimer-=dt;if(p.attackTimer<=0&&p.stun===0)this.resolveAttack(p);}}
+      else if(p.status==='alive'&&has(p,'sprinter')&&p.input.run&&!p.previous.run&&!p.exhaustion&&!p.input.crouch){p.sprintBoost=3;p.exhaustion=40;}
+      if(p.vault){p.vault.progress+=dt;const t=clamp(p.vault.progress/p.vault.seconds,0,1);p.x=p.vault.from.x+(p.vault.to.x-p.vault.from.x)*t;p.y=p.vault.from.y+(p.vault.to.y-p.vault.from.y)*t;if(t>=1)p.vault=null;}else this.move(p,dt);if(p.role==='survivor'&&p.input.item&&p.itemType==='flashlight')p.facing={x:p.input.aimX??1,y:p.input.aimY??0};
+      if(p.deepWound&&p.status==='alive'&&!p.input.run&&!p.mending){p.deepWound=Math.max(0,p.deepWound-dt);if(!p.deepWound){p.health=0;p.status='down';}}
+      if(p.status==='down'){p.bleed+=dt;if(p.bleed>=C.bleedSeconds)this.eliminate(p,'출혈로 탈락');}
+      if(p.status==='caged'){p.hookTime-=dt;if(p.hookTime<=0){p.hookStage++;p.skill=null;if(p.hookStage>=3)this.eliminate(p,'갈고리 희생');else{p.hookTime=C.hookSeconds;this.event(`${p.name} 갈고리 2단계`);}}if(p.hookStage===2){p.nextSkill-=dt;if(p.nextSkill<=0)this.beginSkill(p,'hook',null);}if(k&&!this.powered()&&this.endgame===null&&this.elapsed-p.hookedAt>=7&&distance(p,k)<180&&!k.carrying){const friends=[...this.players.values()].some(q=>q.role==='survivor'&&q.id!==p.id&&q.status==='alive'&&distance(q,p)<180);if(!friends){p.campTime+=dt;p.resolve=clamp(p.resolve+dt/(p.campTime>20?10:p.campTime>10?20:40),0,1);}}}
+      if(p.status==='carried'&&k?.carrying===p.id){p.x=k.x;p.y=k.y+24;if(p.wiggleActive)p.wiggle+=dt;if(!p.skill)this.beginSkill(p,'wiggle',null);}
+      if(p.skill){if(p.input.space&&!p.previous.space){skillConsumed.add(p.id);if(p.skill.type==='wiggle'){const t=(this.elapsed-p.skill.start)/p.skill.duration;p.wiggleActive=t>=.2&&t<=.9;p.skill=null;}else this.skill(p);}else if(this.elapsed>p.skill.start+p.skill.duration){if(p.skill.type==='wiggle'){p.skill=null;p.wiggleActive=false;}else this.skill(p);}}
+      if(p.wiggle>=C.wiggleSeconds&&k?.carrying===p.id)this.dropCarried(k,true);
+      if(p.action&&['발전기 수리','동료 치료','구급상자 자기 치료'].includes(p.action.label))p.nextSkill-=dt;
     }
-    const killer=[...this.players.values()].find(p=>p.role==='killer');
-    if(killer&&killer.status==='alive'&&killer.stun===0&&!killer.carrying)for(const p of this.players.values())if(p.role==='survivor'&&p.status==='alive'&&!p.hidden&&p.immunity===0&&distance(p,killer)<C.playerRadius*2){p.status='down';this.event(`${p.name} 기절`);}
-    for(const p of this.players.values()){this.interact(p,dt,p.input.space&&!p.wasSpace);p.wasSpace=p.input.space;}
-    for(const g of this.map.generators)if(g.workers.length&&g.progress<C.generatorSeconds){g.progress=Math.min(C.generatorSeconds,g.progress+dt);if(g.progress===C.generatorSeconds)this.event(`발전기 가동 완료 (${this.map.generators.filter(q=>q.progress>=C.generatorSeconds).length}/5)`);}
-    for(const c of this.map.cages){if(c.occupant&&c.rescuers.length){c.rescueProgress+=dt;if(c.rescueProgress>=C.rescueSeconds){const q=this.players.get(c.occupant);q.status='alive';q.immunity=C.releaseImmunitySeconds;q.x=c.x+45;this.event(`${q.name} 구출 완료`);c.occupant=null;c.rescueProgress=0;}}else c.rescueProgress=0;}
-    const open=this.map.generators.every(g=>g.progress>=C.generatorSeconds);
-    if(open)for(const p of this.players.values())if(p.role==='survivor'&&p.status==='alive'&&!p.hidden&&this.near(p,this.map.exits,65)){p.status='escaped';this.event(`${p.name} 탈출 성공`);}
-    const survivors=[...this.players.values()].filter(p=>p.role==='survivor');
-    if(killer?.status==='out')this.finish('survivors','살인마의 연결이 종료되었습니다.');
-    else if(survivors.every(p=>['out','escaped'].includes(p.status)))this.finish(survivors.some(p=>p.status==='escaped')?'survivors':'killer',survivors.some(p=>p.status==='escaped')?'추격 종료 · 생존자 탈출 성공':'모든 도망자가 탈락했습니다.');
+    for(const p of this.players.values()){this.interact(p,dt,p.input.space&&!p.previous.space&&!skillConsumed.has(p.id));p.previous={...p.input};}
+    for(const g of this.map.generators){if(g.workers.length){const factor=Math.max(.1,1-.15*(g.workers.length-1));let rate=0;for(const id of g.workers){const p=this.players.get(id);let speed=has(p,'engineer')?1.05:1;if(p.input.item&&p.itemType==='toolbox'&&p.itemCharge>0){speed*=1.5;p.itemCharge=Math.max(0,p.itemCharge-dt);}rate+=speed*factor;}const gain=rate*dt;g.progress=Math.min(C.generatorSeconds,g.progress+gain);if(g.regressing){g.repairToStop+=gain;if(g.repairToStop>=4.5)g.regressing=false;}if(g.progress===C.generatorSeconds){g.regressing=false;this.event(`발전기 가동 · ${this.map.generators.filter(g=>g.progress>=C.generatorSeconds).length}/${this.generatorGoal}`);}}else if(g.regressing&&this.endgame===null)g.progress=Math.max(0,g.progress-.25*dt);}
+    for(const p of this.players.values())if(p.healers.length){const speed=p.healers.reduce((n,id)=>n+(has(this.players.get(id),'medic')?1.15:1),0);if(p.deepWound){p.mend+=dt*speed/6;if(p.mend>=1){p.deepWound=0;p.mend=0;}continue;}if(p.status==='down'){p.recovery+=dt*speed/C.healSeconds;if(p.recovery>=1-1e-8){p.status='alive';p.health=1;p.recovery=0;}}else{p.healProgress+=dt*speed/C.healSeconds;if(p.healProgress>=1-1e-8){p.health=2;p.healProgress=0;}}}
+    for(const h of this.map.cages){if(h.occupant&&h.rescuers.length){h.rescueProgress+=dt;if(h.rescueProgress>=C.rescueSeconds)this.unhook(this.players.get(h.occupant));}else h.rescueProgress=0;}
+    for(const e of this.map.exits)if(e.workers.length&&!e.open){e.progress=Math.min(C.gateSeconds,e.progress+dt);if(e.progress>=C.gateSeconds){e.open=true;this.startEndgame();this.event('탈출구 개방 · 종반 붕괴 시작');}}
+    const survivors=[...this.players.values()].filter(p=>p.role==='survivor'),remaining=survivors.filter(active);if(remaining.length===1&&!this.map.hatch.visible){this.map.hatch.visible=true;this.map.hatch.open=true;this.event('마지막 생존자 · 해치가 열렸습니다.');}
+    for(const p of remaining)if(p.status==='alive'&&!p.hidden&&(this.map.exits.some(e=>e.open&&distance(e,p)<48)||this.map.hatch.visible&&this.map.hatch.open&&distance(p,this.map.hatch)<40)){p.status='escaped';p.skill=null;this.event(`${p.name} 탈출 성공`);}
+    if(this.endgame!==null){this.endgame=Math.max(0,this.endgame-dt*(survivors.some(p=>p.status==='down'||p.status==='caged')?.5:1));if(!this.endgame)for(const p of survivors.filter(active))this.eliminate(p,'종반 붕괴');}
+    for(const p of this.players.values())p.input=p.connected?held.get(p.id):idle();
+    this.traces=this.traces.filter(t=>t.expires>this.elapsed).slice(-400);this.noises=this.noises.filter(n=>n.expires>this.elapsed).slice(-20);
+    if(k?.status==='out')this.finish('survivors','살인마의 연결이 종료되었습니다.');else if(survivors.every(p=>!active(p))){const escaped=survivors.filter(p=>p.status==='escaped').length;this.finish(escaped>=Math.ceil(survivors.length/2)?'survivors':'killer',`경기 종료 · ${escaped}명 탈출 / ${survivors.length-escaped}명 탈락`);}
   }
   finish(winner,reason){this.phase='finished';this.result={winner,reason,escaped:[...this.players.values()].filter(p=>p.status==='escaped').length};}
-  reset(id){if(id!==this.hostId||this.phase!=='finished')return;for(const [key,p]of this.players){if(!p.connected){this.players.delete(key);continue;}Object.assign(p,{status:'alive',carrying:null,hidden:null,action:null,input:{x:0,y:0,space:false}});}if(![...this.players.values()].some(p=>p.role==='killer'))this.players.get(this.hostId).role='killer';this.phase='lobby';this.result=null;this.map=createMap();}
-  snapshot(){return {code:this.code,name:this.name,maxPlayers:this.maxPlayers,hostId:this.hostId,phase:this.phase,map:this.map,players:[...this.players.values()].map(({input,wasSpace,disconnectTime,...p})=>p),elapsed:this.elapsed,result:this.result,events:this.events,config:C};}
+  reset(id){if(id!==this.hostId||this.phase!=='finished')return;for(const [key,p]of this.players)if(!p.connected)this.players.delete(key);else Object.assign(p,this.fresh());if(![...this.players.values()].some(p=>p.role==='killer'))this.players.get(this.hostId).role='killer';this.phase='lobby';this.result=null;this.endgame=null;this.map=createMap();}
+  snapshot(){return {code:this.code,name:this.name,maxPlayers:this.maxPlayers,hostId:this.hostId,phase:this.phase,map:this.map,players:[...this.players.values()].map(({input,previous,pendingPress,healers,vaultCounts,task,nextSkill,traceTimer,disconnectTime,...p})=>({...p,skill:p.skill?{...p.skill,cursor:clamp((this.elapsed-p.skill.start)/p.skill.duration,0,1)}:null})),elapsed:this.elapsed,result:this.result,events:this.events,config:C,generatorGoal:this.generatorGoal,powered:this.powered()||this.endgame!==null,endgame:this.endgame,traces:this.traces,noises:this.noises,perks:PERKS};}
 }
+function segmentRect(a,b,w){const n=Math.ceil(distance(a,b)/8);for(let i=1;i<n;i++)if(intersects(a.x+(b.x-a.x)*i/n,a.y+(b.y-a.y)*i/n,1,w))return true;return false;}

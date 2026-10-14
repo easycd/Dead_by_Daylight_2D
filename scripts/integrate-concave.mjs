@@ -3,7 +3,7 @@ import path from 'node:path';
 const source=path.resolve(process.cwd()),target=path.resolve(process.argv[2]||'C:/Project/Concave');
 if(target.toLowerCase()!=='c:\\project\\concave')throw new Error('Expected explicitly authorized Concave directory.');
 const dest=path.join(target,'nightfall');await mkdir(dest,{recursive:true});
-for(const item of ['config.js','game.js','server.js','server.d.ts','public'])await cp(path.join(source,item),path.join(dest,item),{recursive:true});
+for(const item of ['config.js','map.js','game.js','server.js','server.d.ts','public'])await cp(path.join(source,item),path.join(dest,item),{recursive:true});
 const entry=path.join(target,'server/index.ts');let content=await readFile(entry,'utf8');
 if(!content.includes('createNightfall')){
   content=content.replace("import { fileURLToPath } from 'node:url';","import { fileURLToPath, pathToFileURL } from 'node:url';");

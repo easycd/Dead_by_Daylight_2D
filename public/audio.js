@@ -1,0 +1,7 @@
+export function createAudio({getState,getMyId,button}){
+ let context=null,enabled=false,lastBeat=0,lastSkill='',noises=new Set();
+ button.onclick=async()=>{enabled=!enabled;if(enabled){context??=new AudioContext();await context.resume();}button.textContent=enabled?'소리 켜짐':'소리 꺼짐';button.setAttribute('aria-pressed',String(enabled));};
+ function tone(frequency,duration,volume=.12,type='sine',delay=0){if(!context)return;const o=context.createOscillator(),g=context.createGain(),t=context.currentTime+delay;o.type=type;o.frequency.setValueAtTime(frequency,t);g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(volume,t+.015);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(context.destination);o.start(t);o.stop(t+duration+.01);}
+ function frame(now){if(!enabled||!context||context.state!=='running')return;const s=getState();if(s?.phase!=='playing')return;const own=s.players.find(p=>p.id===getMyId());if(!own)return;const heart=s.heartbeat||0;if(heart>0&&now-lastBeat>1100-heart*650){lastBeat=now;tone(65,.12,.08+heart*.12);tone(52,.14,.06+heart*.1,'sine',.18);}const key=own.skill?own.skill.type+own.skill.start:'';if(key&&key!==lastSkill)tone(920,.13,.12);lastSkill=key;const visible=s.noises||[];for(const n of visible)if(!noises.has(n.id)){tone(140,.18,.09,'triangle');noises.add(n.id);}if(noises.size>50)noises=new Set(visible.map(n=>n.id));}
+ return {frame};
+}
