@@ -42,3 +42,22 @@ test('a new match regenerates geometry and objectives, keeps exits fixed and cle
   for(const family of ['walls','generators','cages','chests','cabinets','pallets'])assert.notDeepEqual(positions(before[family]),positions(r.map[family]));
   assert.ok(r.map.generators.every(g=>g.progress===0));
 });
+
+
+test('every wall structure has exactly two or three actual perimeter openings',()=>{
+ for(let seed=1;seed<=25;seed++){
+  const m=createMap(seed*41),byId=new Map(m.walls.map(w=>[w.id,w]));assert.equal(m.structures.length,15);
+  for(const s of m.structures){
+   assert.ok([2,3].includes(s.openings.length));assert.equal(s.openings.filter(o=>o.type!=='window').length,2);
+   const walls=s.wallIds.map(id=>byId.get(id)),points=[];
+   for(let x=s.x+1;x<s.x+s.w;x+=2)points.push({x,y:s.y+12});
+   for(let y=s.y+1;y<s.y+s.h;y+=2)points.push({x:s.x+s.w-12,y});
+   for(let x=s.x+s.w-1;x>s.x;x-=2)points.push({x,y:s.y+s.h-12});
+   for(let y=s.y+s.h-1;y>s.y;y-=2)points.push({x:s.x+12,y});
+   const free=points.map(p=>!walls.some(w=>p.x>=w.x&&p.x<=w.x+w.w&&p.y>=w.y&&p.y<=w.y+w.h));
+   const openings=free.filter((v,i)=>v&&!free[(i+free.length-1)%free.length]).length;
+   assert.equal(openings,s.openings.length,`seed ${seed} ${s.id}: accidental perimeter gap`);
+   for(const o of s.openings)assert.ok(!walls.some(w=>o.x+o.w/2>w.x&&o.x+o.w/2<w.x+w.w&&o.y+o.h/2>w.y&&o.y+o.h/2<w.y+w.h));
+  }
+ }
+});

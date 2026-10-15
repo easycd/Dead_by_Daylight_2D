@@ -52,11 +52,11 @@ export function createNightfall(io,options={}) {
     s.players=s.players.map(p=>{
       const bush=room.map.bushes.some(b=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h);
       const teamAura=view.role==='survivor'&&p.role==='survivor'&&(['down','caged'].includes(p.status)||view.status==='down');
-      const visible=debugFullMap||p.id===view.id||teamAura||(!p.hidden&&distance(view,p)<=radius&&lineOfSight(room.map,view,p));
+      const visible=debugFullMap||p.id===view.id||teamAura||(!p.hidden&&distance(view,p)<=radius);
       return {...p,x:visible?p.x:null,y:visible?p.y:null,skill:p.id===own.id?p.skill:null,vault:visible?p.vault:null,action:p.id===own.id?p.action:null};
     });
     // Full object inspection is available only to the explicitly requested admin nickname.
-    if(!debugFullMap)s.map={...s.map,items:(s.map.items||[]).filter(i=>distance(view,i)<radius&&lineOfSight(room.map,view,i)),cabinets:s.map.cabinets.map(({occupant,...c})=>c),generators:s.map.generators.map(({workers,...g})=>g),cages:s.map.cages.map(({rescuers,...c})=>c)};
+    if(!debugFullMap)s.map={...s.map,items:(s.map.items||[]).filter(i=>distance(view,i)<radius),cabinets:s.map.cabinets.map(({occupant,...c})=>c),generators:s.map.generators.map(({workers,...g})=>g),cages:s.map.cages.map(({rescuers,...c})=>c)};
     s.audio=[...room.players.values()].filter(p=>p.id!==view.id&&['alive','down'].includes(p.status)&&!p.elusive).flatMap(p=>{
       const d=distance(view,p),range=(p.hidden?8:16)*C.pixelsPerMeter;
       if(d>=range)return [];const volume=(1-d/range)*(lineOfSight(room.map,view,p)?1:.5),pan=Math.max(-1,Math.min(1,(p.x-view.x)/range));
@@ -68,7 +68,7 @@ export function createNightfall(io,options={}) {
     s.heartbeat=view.role==='survivor'&&killer?Math.max(0,1-distance(view,killer)/C.terrorRadius):0;
     s.traces=debugFullMap||view.role==='killer'?s.traces.filter(t=>debugFullMap||distance(view,t)<radius):[];
     s.noises=debugFullMap||view.role==='killer'?s.noises:[];
-    if(!full) { const {walls,bushes,width,height,seed,zones,paths,decor,spawns,windows,name,...dynamic}=s.map;s.map=dynamic;delete s.config;delete s.perks; }
+    if(!full) { const {walls,bushes,width,height,seed,zones,paths,decor,spawns,windows,name,structures,...dynamic}=s.map;s.map=dynamic;delete s.config;delete s.perks; }
     socket.emit('state',s);
   }
   function broadcast(room,full=false){for(const socket of ns.sockets.values())if(sessions.get(socket.data.token)?.roomCode===room.code)sendRoom(socket,room,full);}

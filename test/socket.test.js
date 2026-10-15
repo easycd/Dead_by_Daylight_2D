@@ -25,11 +25,11 @@ test('real sockets create/join, validate roles, move, isolate rooms, reconnect a
   const id=a.identity;a.disconnect();await sleep(40);assert.equal(p.connected,false);const again=await client(aToken);await sleep(120);assert.equal(again.identity,id);assert.equal(p.connected,true);assert.equal(again.latest.phase,'playing');
   assert.equal((await emit(again,'leave')).ok,true);await sleep(120);assert.equal(again.latest,null);assert.equal(room.players.get(id).bot,true);
 });
-test('server masks walls, distance and lockers without making bushes invisibility zones; spectators follow vision',async t=>{
+test('circular vision ignores wall shadows, masks distance and lockers; spectators follow vision',async t=>{
   const {server,client}=await fixture(t),k=await client(),a=await client(),b=await client();await emit(k,'create',{name:'fog',nickname:'K',maxPlayers:3});await sleep(30);const code=k.latest.code;await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});await sleep(120);await emit(k,'start');await sleep(120);
   const room=server.game.rooms.get(code),killer=room.players.get(k.identity),survivor=room.players.get(a.identity);room.map.walls=[];killer.x=1000;killer.y=1300;survivor.x=2800;survivor.y=2200;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);
   survivor.x=1100;survivor.y=1300;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,1100);
-  const bush=room.map.bushes[0];survivor.x=bush.x+50;survivor.y=bush.y+50;killer.x=survivor.x-160;killer.y=survivor.y;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls.push({x:survivor.x-80,y:survivor.y-50,w:15,h:100});await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls=[];killer.x=survivor.x-50;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);
+  const bush=room.map.bushes[0];survivor.x=bush.x+50;survivor.y=bush.y+50;killer.x=survivor.x-160;killer.y=survivor.y;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls.push({x:survivor.x-80,y:survivor.y-50,w:15,h:100});await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls=[];killer.x=survivor.x-50;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);
   survivor.hidden=room.map.cabinets[0].id;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);assert.equal(k.latest.map.cabinets[0].occupant,undefined);
   survivor.hidden=null;survivor.status='out';survivor.spectateId=killer.id;await sleep(150);assert.equal(a.latest.viewId,killer.id);assert.notEqual(a.latest.players.find(p=>p.id===killer.id).x,null);
 });
@@ -45,7 +45,7 @@ test('admin can inspect the lobby and full map; regular users retain fog and can
   assert.equal(admin.latest.debug.fullMap,true);assert.equal(admin.latest.phase,'lobby');assert.ok(admin.latest.map.walls.length>60);
   await sleep(120);await emit(admin,'start');await sleep(120);
   const room=server.game.rooms.get(code),p=room.players.get(a.identity),other=room.players.get(b.identity),h=room.map.cabinets[0];
-  p.x=h.x;p.y=h.y;p.hidden=h.id;h.occupant=p.id;other.x=4200;other.y=3900;
+  h.x=1000;h.y=1000;p.x=h.x;p.y=h.y;p.hidden=h.id;h.occupant=p.id;other.x=4200;other.y=3900;
   await sleep(150);
   assert.equal(admin.latest.players.find(q=>q.id===p.id).x,h.x);assert.equal(admin.latest.map.cabinets[0].occupant,p.id);
   assert.equal(admin.latest.players.find(q=>q.id===other.id).x,4200);assert.equal(a.latest.players.find(q=>q.id===other.id).x,null);assert.equal(a.latest.map.cabinets[0].occupant,undefined);
@@ -83,4 +83,10 @@ test('a short network click attacks once, validated inputs and private skill che
  k.emit('input',{attack:true,aimX:100,aimY:0});k.emit('input',{attack:false,aimX:100,aimY:0});await sleep(350);assert.equal(ap.health,1);assert.equal(kp.facing.x,1);assert.equal(kp.carrying,null);
  a.emit('input',{x:Infinity,y:NaN,health:99,status:'escaped'});await sleep(80);assert.equal(ap.health,1);assert.equal(ap.status,'alive');assert.ok(Number.isFinite(ap.x));assert.equal((await emit(a,'loadout',{item:'none',perks:[]})).ok,false);
  room.beginSkill(ap,'hook',null);await waitFor(()=>a.latest.players.find(p=>p.id===a.identity).skill);assert.ok(a.latest.players.find(p=>p.id===a.identity).skill);assert.equal(b.latest.players.find(p=>p.id===a.identity).skill,null);assert.equal(k.latest.players.find(p=>p.id===a.identity).skill,null);
+});
+
+test('hook rescue auras cross fog until rescued; killer always receives objective positions',async t=>{
+ const {server,client}=await fixture(t),k=await client(),a=await client(),b=await client();await emit(k,'create',{name:'objective visibility',nickname:'K',maxPlayers:3});const code=k.latest.code;await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});await emit(k,'start');
+ const room=server.game.rooms.get(code),p=room.players.get(a.identity),q=room.players.get(b.identity),killer=room.players.get(k.identity),h=room.map.cages[0];room.map.walls=[];killer.x=1000;killer.y=1000;p.x=1500;p.y=1000;q.x=4000;q.y=3500;q.status='caged';q.hookStage=2;q.hookTime=70;q.hookedAt=room.elapsed;h.x=q.x;h.y=q.y;h.occupant=q.id;
+ await sleep(180);assert.equal(a.latest.players.find(v=>v.id===q.id).x,4000);assert.equal(a.latest.players.find(v=>v.id===q.id).hookStage,2);assert.equal(k.latest.map.cages.find(v=>v.id===h.id).x,4000);assert.equal(k.latest.map.generators.length,5);assert.ok(k.latest.map.generators.every(g=>Number.isFinite(g.x)&&Number.isFinite(g.y)));room.unhook(q);await sleep(180);assert.equal(a.latest.players.find(v=>v.id===q.id).status,'alive');assert.equal(a.latest.players.find(v=>v.id===q.id).x,null);
 });

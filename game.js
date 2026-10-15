@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { CONFIG as C } from './config.js';
 import { SurvivorBots } from './bots.js';
-import { attackRecoveryMultiplier, skillProfile, campRate, ITEMS } from './rules.js';
+import { attackRecoveryMultiplier, skillProfile, campRate, ITEMS, repairSkillChance } from './rules.js';
 import { createMap } from './map.js';
 export { createMap } from './map.js';
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -14,7 +14,7 @@ const active=p=>!['out','escaped'].includes(p.status);
 const has=(p,key)=>p.perks.includes(key);
 export class Room {
   constructor(code,name,maxPlayers=C.defaultPlayers){this.code=code;this.name=name;this.maxPlayers=clamp(maxPlayers,3,C.maxPlayers);this.players=new Map();this.hostId=null;this.phase='lobby';this.map=createMap();this.events=[];this.elapsed=0;this.result=null;this.updatedAt=Date.now();this.generatorGoal=C.generatorGoal;this.endgame=null;this.traces=[];this.noises=[];this.random=Math.random;this.bots=new SurvivorBots(this);}
-  fresh(){return {status:'alive',health:2,cageCount:0,hookStage:0,hookTime:0,resolve:0,campTime:0,disconnectTime:0,stun:0,immunity:0,deepWound:0,mend:0,hitBoost:0,exhaustion:0,sprintBoost:0,patrolBoost:0,carrying:null,hidden:null,action:null,task:null,input:idle(),previous:idle(),pendingPress:new Set(),skill:null,nextSkill:1,wiggle:0,wiggleActive:false,recovery:0,bleed:0,cooldown:0,attackTimer:0,swing:0,flashBlind:0,blindProgress:0,selfAttempts:0,bloodlust:0,chaseTime:0,vault:null,vaultCounts:{},facing:{x:1,y:0},spectateId:null,scratchTimer:0,bloodTimer:0,healProgress:0,hookedAt:null,haste:0,elusive:0,attackState:null,recoveryKind:null,recoveryDuration:0,moveSpeed:0,runDistance:0,lastMove:{x:0,y:0},chaseTarget:null,chaseLost:0,missedHookChecks:0,afkTime:0,crows:0,wiggleStrength:.5,lockerTransition:null,bot:false,skillRoll:1,lockerTime:0,afkOrigin:null,lastCrow:0};}
+  fresh(){return {status:'alive',health:2,cageCount:0,hookStage:0,hookTime:0,resolve:0,campTime:0,disconnectTime:0,stun:0,immunity:0,deepWound:0,mend:0,hitBoost:0,exhaustion:0,sprintBoost:0,patrolBoost:0,carrying:null,hidden:null,action:null,task:null,input:idle(),previous:idle(),pendingPress:new Set(),skill:null,nextSkill:1,wiggle:0,wiggleActive:false,recovery:0,bleed:0,cooldown:0,attackTimer:0,swing:0,flashBlind:0,blindProgress:0,selfAttempts:0,bloodlust:0,chaseTime:0,vault:null,vaultCounts:{},facing:{x:1,y:0},spectateId:null,scratchTimer:0,bloodTimer:0,healProgress:0,hookedAt:null,haste:0,elusive:0,attackState:null,recoveryKind:null,recoveryDuration:0,moveSpeed:0,runDistance:0,lastMove:{x:0,y:0},chaseTarget:null,chaseLost:0,missedHookChecks:0,afkTime:0,crows:0,wiggleStrength:.5,lockerTransition:null,bot:false,skillRoll:1,lockerTime:0,afkOrigin:null,lastCrow:0,pickupBy:null,palletDrop:null,repairRolls:0};}
   addPlayer(name,role=null){if(this.phase!=='lobby')throw new Error('이미 시작된 방입니다.');if(this.players.size>=this.maxPlayers)throw new Error('방이 가득 찼습니다.');const p={id:randomUUID(),name,role:role||(this.players.size?'survivor':'killer'),x:0,y:0,connected:true,perks:[],itemType:'medkit',itemCharge:24,...this.fresh()};this.players.set(p.id,p);this.hostId??=p.id;return p;}
   setRole(id,role){if(this.phase!=='lobby')throw new Error('경기 중에는 진영을 변경할 수 없습니다.');const p=this.players.get(id);if(!p||!['killer','survivor','waiting'].includes(role))throw new Error('진영을 확인해주세요.');if(role==='killer'&&[...this.players.values()].some(q=>q.id!==id&&q.role==='killer'))throw new Error('살인마 자리가 차 있습니다. 자리가 비면 이동할 수 있습니다.');if(p.role!==role){p.role=role;p.perks=[];}}
   loadout(id,data){if(this.phase!=='lobby')throw new Error('대기실에서만 장비를 바꿀 수 있습니다.');const p=this.players.get(id);if(!p)return;if(p.role==='waiting')throw new Error('먼저 진영을 선택해주세요.');const perks=data?.perks;if(!Array.isArray(perks)||perks.length>4||new Set(perks).size!==perks.length||perks.some(k=>PERKS[k]?.role!==p.role))throw new Error('역할에 맞는 특전을 최대 4개 선택하세요.');if(!Object.keys(ITEMS).includes(data?.item))throw new Error('아이템을 확인해주세요.');p.perks=[...perks];p.itemType=p.role==='survivor'?data.item:'none';}
@@ -74,12 +74,12 @@ export class Room {
     else if(a.elapsed>=.5)this.finishAttack(k,'miss');
   }
   move(p,dt){
-    if(!['alive','down'].includes(p.status)||p.stun||p.hidden||p.vault||p.lockerTransition||p.task&&(p.input.work||p.input.space||p.input.self)){p.moveSpeed=0;p.runDistance=0;return;}
+    if(!['alive','down'].includes(p.status)||p.stun||p.hidden||p.vault||p.lockerTransition||p.pickupBy||p.palletDrop||p.task&&(p.input.work||p.input.space||p.input.self)){p.moveSpeed=0;p.runDistance=0;return;}
     let {x,y}=p.input;const killer=p.role==='killer',lunge=killer&&p.attackState?.phase==='lunge';
     if(lunge){x=p.facing.x;y=p.facing.y;}
     if(killer&&p.carrying&&(x||y)){const q=this.players.get(p.carrying),sway=Math.sin(this.elapsed*4)*(q?.wiggleStrength||.25)*.25;x-=p.facing.y*sway;y+=p.facing.x*sway;}
     const len=Math.hypot(x,y);if(!len){p.moveSpeed=0;p.runDistance=0;return;}if(len>1){x/=len;y/=len;}
-    let speed=killer?C.survivorSpeed*C.killerSpeedMultiplier:p.status==='down'?29.75:p.input.crouch?C.crouchSpeed:p.input.run?C.survivorSpeed:C.walkSpeed;
+    let speed=killer?C.survivorSpeed*C.killerSpeedMultiplier:p.status==='down'?C.crawlSpeed:p.input.crouch?C.crouchSpeed:p.input.run?C.survivorSpeed:C.walkSpeed;
     if(killer&&p.carrying)speed=C.survivorSpeed*.92;
     if(killer&&p.bloodlust&&!p.carrying&&!lunge)speed+=p.bloodlust*8.5;
     if(killer&&p.cooldown>0)speed*=attackRecoveryMultiplier(p.recoveryKind||'hit',p.cooldown,p.recoveryDuration||C.attackCooldown);
@@ -109,7 +109,7 @@ export class Room {
   beginSkill(p,type,target){if(p.skill)return;p.skill={type,target,start:this.elapsed+(type==='wiggle'?0:.65),...skillProfile(type,this.random)};}
   rollSkill(p,type,target,dt,chance){
     p.nextSkill-=dt;if(p.nextSkill>0||p.skill)return;
-    p.nextSkill=1;if(this.random()<chance)this.beginSkill(p,type,target);
+    p.nextSkill=1;if(type==='repair')p.repairRolls++;const g=type==='repair'?this.map.generators.find(g=>g.id===target):null,limit=g?Math.max(3,Math.round(6-3*g.progress/C.generatorSeconds)):Infinity;if(this.random()<chance||p.repairRolls>=limit){this.beginSkill(p,type,target);if(type==='repair')p.repairRolls=0;}
   }
   skill(p,missed=false){
     const s=p.skill;if(!s)return;
@@ -156,8 +156,8 @@ export class Room {
     if(p.status==='caged'){p.action={label:`갈고리 ${p.hookStage}단계 · ${Math.ceil(p.hookTime)}초 / 캠핑 방지 ${Math.floor(p.resolve*100)}%`,progress:p.resolve};if(p.input.self&&(p.resolve>=1||p.hookStage===1&&p.selfAttempts<3&&[...this.players.values()].filter(q=>q.role==='survivor'&&active(q)).length<=2)){
       p.task=keepTask;this.task(p,'self-unhook','자력 구출 시도',1.5,dt,()=>{if(p.resolve>=1||this.random()<.04)this.unhook(p);else{p.selfAttempts++;p.hookTime-=20;this.event(p.name+' 자력 구출 실패 · 20초 감소');}});
     }return;}
-    if(p.status==='down'){if(!p.input.x&&!p.input.y&&p.recovery<.95)p.recovery=Math.min(.95,p.recovery+dt/32);p.action={label:`회복 ${Math.floor(p.recovery*100)}% · 동료의 도움이 필요합니다`,progress:p.recovery};return;}
-    if(p.stun||p.vault||p.lockerTransition)return;
+    if(p.status==='down'){if(p.pickupBy){p.action={label:'살인마가 들어 올리는 중',progress:0};return;}if(!p.input.x&&!p.input.y&&p.recovery<.95)p.recovery=Math.min(.95,p.recovery+dt/32);p.action={label:`회복 ${Math.floor(p.recovery*100)}% · 동료의 도움이 필요합니다`,progress:p.recovery};return;}
+    if(p.stun||p.vault||p.lockerTransition||p.palletDrop)return;
     if(p.hidden){if(pressed){const l=this.map.cabinets.find(l=>l.id===p.hidden);if(l){p.lockerTransition={remaining:p.input.run?.5:1.2,type:'exit',id:l.id};if(p.input.run)this.noise(p,'급하게 나오기');}}return;}
     const working=p.input.work||p.input.space&&!p.skill;
     if(p.role==='killer'){
@@ -166,7 +166,7 @@ export class Room {
       if(p.input.drop&&!p.previous.drop&&p.carrying){this.dropCarried(p);return;}
       if(!working)return;p.task=keepTask;
       if(p.carrying){const h=this.near(p,this.map.cages.filter(h=>!h.occupant&&(h.availableUntil||0)<=this.elapsed));if(h)this.task(p,h.id,'갈고리에 걸기',1.5,dt,()=>{const q=this.players.get(p.carrying);p.carrying=null;q.cageCount++;q.hookStage++;q.hookTime=C.hookSeconds;q.hookedAt=this.elapsed;q.resolve=0;q.campTime=0;q.status='caged';q.health=1;q.wiggle=0;q.wiggleActive=false;q.recovery=0;q.healProgress=0;q.deepWound=0;q.skill=null;q.immunity=0;q.haste=0;q.elusive=0;for(const survivor of this.players.values())if(survivor.status==='caged')survivor.hookedAt=this.elapsed;q.x=h.x;q.y=h.y;h.occupant=q.id;if(q.hookStage>=3)this.eliminate(q,'갈고리 희생');else this.event(`${q.name} 갈고리 ${q.hookStage}단계`);if(has(p,'patrol'))p.patrolBoost=8;});else p.task=null;return;}
-      const down=this.near(p,[...this.players.values()].filter(q=>q.status==='down'),65);if(down){this.task(p,down.id,'들어 올리기',C.pickupSeconds,dt,()=>{if(down.lockerTransition){for(const l of this.map.cabinets)if(l.occupant===down.id)l.occupant=null;down.lockerTransition=null;}down.status='carried';down.health=0;down.wiggleActive=true;down.skill=null;p.carrying=down.id;});return;}
+      const locked=this.players.get(keepTask?.key),down=locked?.status==='down'&&distance(p,locked)<65&&lineOfSight(this.map,p,locked)?locked:this.near(p,[...this.players.values()].filter(q=>q.status==='down'),65);if(down){down.pickupBy=p.id;this.task(p,down.id,'들어 올리기',C.pickupSeconds,dt,()=>{if(down.lockerTransition){for(const l of this.map.cabinets)if(l.occupant===down.id)l.occupant=null;down.lockerTransition=null;}down.pickupBy=null;down.status='carried';down.health=0;down.wiggleActive=true;down.skill=null;p.carrying=down.id;});return;}
       const v=this.near(p,this.map.windows,62);if(v&&pressed){p.task=null;this.vault(p,v);return;}
       const pallet=this.near(p,this.map.pallets.filter(o=>o.state==='dropped'),70);if(pallet){this.task(p,pallet.id,'파레트 파괴',C.breakPalletSeconds/(has(p,'breaker')?1.15:1),dt,()=>{pallet.state='broken';p.chaseTime=0;p.bloodlust=0;this.event('파레트가 파괴되었습니다.');});pallet.breakProgress=p.task?.progress||0;return;}
       if(this.map.hatch.visible&&this.map.hatch.open&&distance(p,this.map.hatch)<65){this.task(p,'hatch','해치 닫기',.7,dt,()=>{this.map.hatch.open=false;this.startEndgame();this.event('해치가 닫혔습니다. 출구 스위치를 사용하세요.');});return;}
@@ -176,7 +176,7 @@ export class Room {
     }
     if(p.deepWound&&(working||p.input.item)){p.task=keepTask;this.task(p,'mend','깊은 상흔 치유',10,dt,()=>p.deepWound=0);return;}
     if(pressed&&!p.skill){
-      const pal=this.near(p,this.map.pallets.filter(o=>o.state!=='broken'),65);if(pal){if(pal.state==='ready'){pal.state='dropped';const k=[...this.players.values()].find(q=>q.role==='killer'),center={x:pal.x+pal.w/2,y:pal.y+pal.h/2};if(k&&distance(k,center)<55&&((pal.axis==='x'?(p.x-center.x)*(k.x-center.x):(p.y-center.y)*(k.y-center.y))<=0)){k.stun=C.stunSeconds;this.dropCarried(k,true);k.stun=C.stunSeconds;}}else this.vault(p,pal);return;}
+      const pal=this.near(p,this.map.pallets.filter(o=>o.state!=='broken'),65);if(pal){if(pal.state==='ready'){pal.state='falling';pal.dropStarted=this.elapsed;pal.dropAt=this.elapsed+C.palletDropSeconds;pal.dropOrigin={x:p.x,y:p.y};p.palletDrop={id:pal.id,until:pal.dropAt};}else if(pal.state==='dropped')this.vault(p,pal);return;}
       const v=this.near(p,this.map.windows,65);if(v){this.vault(p,v);return;}
       const l=this.near(p,this.map.cabinets.filter(l=>!l.occupant),55);if(l){l.occupant=p.id;p.lockerTransition={remaining:p.input.run?.5:1.2,type:'enter',id:l.id};if(p.input.run)this.noise(p,'급하게 숨기');return;}
     }
@@ -191,11 +191,11 @@ export class Room {
     const sabotage=this.near(p,this.map.cages.filter(h=>!h.occupant&&(h.availableUntil||0)<=this.elapsed),55);
     if(sabotage&&p.input.item&&p.itemType==='toolbox'&&p.itemCharge>=6){this.conspicuous(p);p.task=keepTask;this.task(p,sabotage.id,'갈고리 파괴',2.5,dt,()=>{p.itemCharge=Math.max(0,p.itemCharge-6);sabotage.availableUntil=this.elapsed+30;this.noise(sabotage,'갈고리 파괴');});return;}
     const h=this.near(p,this.map.cages.filter(h=>h.occupant));if(h&&working){this.conspicuous(p);h.rescuers.push(p.id);p.action={label:'동료 구출',progress:h.rescueProgress/C.rescueSeconds};return;}
-    const friend=this.near(p,[...this.players.values()].filter(q=>q.id!==p.id&&q.role==='survivor'&&((q.status==='alive'&&q.health===1)||q.status==='down')&&!q.hidden&&!q.vault),55);
+    const friend=this.near(p,[...this.players.values()].filter(q=>q.id!==p.id&&q.role==='survivor'&&((q.status==='alive'&&q.health===1)||q.status==='down')&&!q.hidden&&!q.vault&&!q.pickupBy),55);
     if(friend&&(working||p.input.item&&p.itemType==='medkit'&&p.itemCharge>0)){if(p.cooldown)return;this.conspicuous(p);if(friend.deepWound)friend.receivingMend=true;p.action={label:friend.deepWound?'동료 상흔 치유':'동료 치료',progress:friend.status==='down'?friend.recovery:friend.healProgress||0};friend.healers.push(p.id);if(!friend.deepWound)this.rollSkill(p,'heal',friend.id,dt,p.input.item&&p.itemType==='medkit'?.15:.15);return;}
     if(p.input.item&&p.itemType==='medkit'&&p.health===1&&p.itemCharge>0){if(p.cooldown)return;this.conspicuous(p);this.rollSkill(p,'heal',p.id,dt,.125);const rate=(has(p,'medic')?1.15:1)/24;const used=Math.min(p.itemCharge,dt);p.healProgress+=rate*used;p.itemCharge=Math.max(0,p.itemCharge-used);p.action={label:'구급상자 자기 치료',progress:p.healProgress};if(p.healProgress>=1-1e-8){p.health=2;p.healProgress=0;}return;}
     if(p.input.item&&p.itemType==='flashlight'&&p.itemCharge>0){p.itemCharge=Math.max(0,p.itemCharge-dt);p.flashlight=true;const k=[...this.players.values()].find(q=>q.role==='killer');if(k&&distance(p,k)<10*C.pixelsPerMeter&&lineOfSight(this.map,p,k)){const d=Math.max(1,distance(p,k));if(((k.x-p.x)*p.input.aimX+(k.y-p.y)*p.input.aimY)/d>.92&&(k.facing.x*(p.x-k.x)+k.facing.y*(p.y-k.y))/d>.3){k.blindProgress=(k.blindProgress||0)+dt;if(k.blindProgress>=1){k.flashBlind=2;this.dropCarried(k,true);k.blindProgress=0;}}}return;}
-    const g=this.near(p,this.map.generators.filter(g=>g.progress<C.generatorSeconds));if(g&&!this.powered()&&this.endgame===null&&(working||p.input.item&&p.itemType==='toolbox')){if(p.cooldown)return;this.conspicuous(p);if(g.workers.length>=4)return;g.workers.push(p.id);p.action={label:'발전기 수리',progress:g.progress/C.generatorSeconds};this.rollSkill(p,'repair',g.id,dt,p.input.item&&p.itemType==='toolbox'&&p.itemCharge>0?.4:.08);return;}
+    const g=this.near(p,this.map.generators.filter(g=>g.progress<C.generatorSeconds));if(g&&!this.powered()&&this.endgame===null&&(working||p.input.item&&p.itemType==='toolbox')){if(p.cooldown)return;this.conspicuous(p);if(g.workers.length>=4)return;g.workers.push(p.id);p.action={label:'발전기 수리',progress:g.progress/C.generatorSeconds};this.rollSkill(p,'repair',g.id,dt,repairSkillChance(g.progress/C.generatorSeconds,p.input.item&&p.itemType==='toolbox'&&p.itemCharge>0));return;}
     const e=this.near(p,this.map.exits,70);if(e&&(this.powered()||this.endgame!==null)&&!e.open&&working){this.conspicuous(p);e.workers.push(p.id);p.action={label:'탈출구 개방',progress:e.progress/C.gateSeconds};return;}
     const ch=this.near(p,this.map.chests.filter(ch=>!ch.opened),60);if(ch&&working){this.conspicuous(p);p.task=keepTask;this.task(p,ch.id,'상자 열기',10,dt,()=>{ch.opened=true;this.dropItem(p);p.itemType=ch.item;p.itemCharge=ITEMS[ch.item]?.charge||0;});}
   }
@@ -213,6 +213,11 @@ export class Room {
     }
   }
   tick(dt){if(this.phase!=='playing')return;this.elapsed+=dt;for(const g of this.map.generators)g.workers=[];for(const h of this.map.cages)h.rescuers=[];for(const e of this.map.exits)e.workers=[];for(const p of this.players.values()){p.healers=[];p.mending=p.receivingMend||p.task?.key==='mend';p.receivingMend=false;}const k=[...this.players.values()].find(p=>p.role==='killer');
+    // Resolve the landing once on the server, so rendered motion and stun share one clock.
+    for(const pal of this.map.pallets)if(pal.state==='falling'&&this.elapsed>=pal.dropAt){pal.state='dropped';const center={x:pal.x+pal.w/2,y:pal.y+pal.h/2},origin=pal.dropOrigin;if(k&&k.status==='alive'&&origin&&distance(k,center)<55&&((pal.axis==='x'?(origin.x-center.x)*(k.x-center.x):(origin.y-center.y)*(k.y-center.y))<=0)){this.dropCarried(k,true);k.stun=C.stunSeconds;}delete pal.dropOrigin;}
+    // Freeze pickup targets before anyone moves, independent of player iteration order.
+    for(const p of this.players.values()){p.pickupBy=null;if(p.palletDrop?.until<=this.elapsed)p.palletDrop=null;}
+    if(k?.connected&&k.status==='alive'&&!k.stun&&!k.cooldown&&!k.attackState&&!k.carrying&&(k.input.work||k.input.space)&&k.task){const target=this.players.get(k.task.key);if(target?.status==='down'&&distance(k,target)<65&&lineOfSight(this.map,k,target))target.pickupBy=k.id;}
     const skillConsumed=new Set(),held=new Map();for(const p of this.players.values()){held.set(p.id,p.input);if(p.pendingPress.size){p.input={...p.input};for(const key of p.pendingPress)p.input[key]=true;p.pendingPress.clear();}}
     for(const p of this.players.values()){
       if(!p.connected){p.disconnectTime+=dt;p.input=idle();if(p.disconnectTime>=C.disconnectGraceSeconds){if(p.role==='killer')this.eliminate(p,'연결 종료');else p.bot=true;}}if(p.bot){this.bots.frame(p);held.set(p.id,p.input);}
@@ -265,6 +270,6 @@ export class Room {
   }
   finish(winner,reason){this.phase='finished';this.result={winner,reason,escaped:[...this.players.values()].filter(p=>p.status==='escaped').length};}
   reset(id){if(id!==this.hostId||this.phase!=='finished')return;for(const [key,p]of this.players)if(!p.connected)this.players.delete(key);else Object.assign(p,this.fresh());this.phase='lobby';this.result=null;this.endgame=null;this.map=createMap();}
-  snapshot(){return {code:this.code,name:this.name,maxPlayers:this.maxPlayers,hostId:this.hostId,phase:this.phase,map:this.map,players:[...this.players.values()].map(({input,previous,pendingPress,healers,vaultCounts,task,nextSkill,scratchTimer,bloodTimer,disconnectTime,skillRoll,lastMove,...p})=>({...p,skill:p.skill?{...p.skill,cursor:clamp((this.elapsed-p.skill.start)/p.skill.duration,0,1)}:null})),elapsed:this.elapsed,result:this.result,events:this.events,config:C,generatorGoal:this.generatorGoal,powered:this.powered()||this.endgame!==null,endgame:this.endgame,traces:this.traces,noises:this.noises,perks:PERKS};}
+  snapshot(){return {code:this.code,name:this.name,maxPlayers:this.maxPlayers,hostId:this.hostId,phase:this.phase,map:this.map,players:[...this.players.values()].map(({input,previous,pendingPress,healers,vaultCounts,task,nextSkill,repairRolls,scratchTimer,bloodTimer,disconnectTime,skillRoll,lastMove,...p})=>({...p,skill:p.skill?{...p.skill,cursor:clamp((this.elapsed-p.skill.start)/p.skill.duration,0,1)}:null})),elapsed:this.elapsed,result:this.result,events:this.events,config:C,generatorGoal:this.generatorGoal,powered:this.powered()||this.endgame!==null,endgame:this.endgame,traces:this.traces,noises:this.noises,perks:PERKS};}
 }
 function segmentRect(a,b,w){const n=Math.ceil(distance(a,b)/8);for(let i=1;i<n;i++)if(intersects(a.x+(b.x-a.x)*i/n,a.y+(b.y-a.y)*i/n,1,w))return true;return false;}
