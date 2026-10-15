@@ -5,7 +5,9 @@ import { io as connect } from 'socket.io-client';
 import { createStandaloneServer } from '../server.js';
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function waitFor(predicate){const deadline=Date.now()+2000;while(!predicate()){if(Date.now()>deadline)throw new Error('Expected socket state was not received');await sleep(20);}}
-const emit=(s,event,data={})=>new Promise((resolve,reject)=>s.timeout(2000).emit(event,data,(e,r)=>e?reject(e):resolve(r)));
+const emitRaw=(s,event,data={})=>new Promise((resolve,reject)=>s.timeout(2000).emit(event,data,(e,r)=>e?reject(e):resolve(r)));
+// Combat fixtures explicitly select teams after entering the new waiting area.
+async function emit(s,event,data={}){const reply=await emitRaw(s,event,data);if(reply?.ok&&['create','join'].includes(event)){await sleep(110);await emitRaw(s,'role',{role:event==='create'?'killer':'survivor'});await sleep(110);}return reply;}
 async function fixture(t){const server=createStandaloneServer({allowGuest:true});await new Promise(resolve=>server.http.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.http.address().port}`,clients=[];
   t.after(async()=>{for(const c of clients)c.disconnect();await server.close();});
   async function client(token=randomUUID()){const s=connect(`${url}/nightfall`,{auth:{token},forceNew:true,transports:['websocket']});s.latest=null;s.identity=null;s.on('state',v=>{s.latest=v?{...v,map:{...s.latest?.map,...v.map}}:null;});s.on('identity',id=>s.identity=id);clients.push(s);await new Promise((resolve,reject)=>{s.once('connect',resolve);s.once('connect_error',reject);});return s;}

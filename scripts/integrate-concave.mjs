@@ -5,7 +5,7 @@ if(target.toLowerCase()!=='c:\\project\\concave')throw new Error('Expected expli
 const dest=path.join(target,'nightfall');await mkdir(dest,{recursive:true});
 const ignorePath=path.join(target,'.gitignore'),ignore=await readFile(ignorePath,'utf8');
 if(!ignore.split(/\r?\n/).includes('.data/nightfall-accounts.json*'))await writeFile(ignorePath,ignore+'\n# Local NIGHTFALL credentials and sessions\n.data/nightfall-accounts.json*\n');
-for(const item of ['config.js','rules.js','bots.js','accounts.js','map.js','game.js','server.js','server.d.ts','public'])await cp(path.join(source,item),path.join(dest,item),{recursive:true});
+for(const item of ['config.js','rules.js','bots.js','social.js','accounts.js','map.js','game.js','server.js','server.d.ts','public'])await cp(path.join(source,item),path.join(dest,item),{recursive:true});
 const entry=path.join(target,'server/index.ts');let content=await readFile(entry,'utf8');
 if(!content.includes('createNightfall')){
   content=content.replace("import { fileURLToPath } from 'node:url';","import { fileURLToPath, pathToFileURL } from 'node:url';");

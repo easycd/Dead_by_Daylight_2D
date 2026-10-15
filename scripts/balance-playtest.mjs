@@ -9,7 +9,7 @@ server.game.rooms.set(room.code,room);
 let mode='idle',human,opponent,started=0,records=[];
 function scenario(name){
   human=[...room.players.values()].find(p=>p.accountId);if(!human)throw new Error('먼저 방에 참가하세요.');
-  room.phase='lobby';room.setRole(human.id,name==='killer'?'killer':'survivor');
+  room.phase='lobby';for(const p of room.players.values())room.setRole(p.id,'survivor');room.setRole(human.id,name==='killer'?'killer':'survivor');
   if(name!=='killer')room.setRole([...room.players.values()].find(p=>p.id!==human.id).id,'killer');
   room.hostId=human.id;room.start(human.id);room.map=createMap(731);
   opponent=[...room.players.values()].find(p=>p.id!==human.id&&(name==='killer'?p.role==='survivor':p.role==='killer'));
