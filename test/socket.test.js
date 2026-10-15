@@ -4,15 +4,16 @@ import { randomUUID } from 'node:crypto';
 import { io as connect } from 'socket.io-client';
 import { createStandaloneServer } from '../server.js';
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function waitFor(predicate){const deadline=Date.now()+2000;while(!predicate()){if(Date.now()>deadline)throw new Error('Expected socket state was not received');await sleep(20);}}
 const emit=(s,event,data={})=>new Promise((resolve,reject)=>s.timeout(2000).emit(event,data,(e,r)=>e?reject(e):resolve(r)));
-async function fixture(t){const server=createStandaloneServer();await new Promise(resolve=>server.http.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.http.address().port}`,clients=[];
+async function fixture(t){const server=createStandaloneServer({allowGuest:true});await new Promise(resolve=>server.http.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.http.address().port}`,clients=[];
   t.after(async()=>{for(const c of clients)c.disconnect();await server.close();});
   async function client(token=randomUUID()){const s=connect(`${url}/nightfall`,{auth:{token},forceNew:true,transports:['websocket']});s.latest=null;s.identity=null;s.on('state',v=>{s.latest=v?{...v,map:{...s.latest?.map,...v.map}}:null;});s.on('identity',id=>s.identity=id);clients.push(s);await new Promise((resolve,reject)=>{s.once('connect',resolve);s.once('connect_error',reject);});return s;}
   return {server,url,client};
 }
 test('real sockets create/join, validate roles, move, isolate rooms, reconnect and serve assets',async t=>{
   const {server,url,client}=await fixture(t),k=await client(),aToken=randomUUID(),a=await client(aToken),b=await client(),other=await client();
-  assert.equal((await fetch(`${url}/dbd/api/health`)).status,200);assert.match(await (await fetch(`${url}/dbd/`)).text(),/NIGHTFALL/);assert.equal((await fetch(`${url}/dbd/no-file`)).status,404);
+  assert.equal((await fetch(`${url}/dbd/api/health`)).status,200);assert.match(await (await fetch(`${url}/dbd/`)).text(),/데바데2D/);assert.equal((await fetch(`${url}/dbd/no-file`)).status,404);assert.equal((await fetch(`${url}/dbd/skill-check.js`)).status,200);
   assert.equal((await emit(k,'create',{name:'room',nickname:'K',maxPlayers:6})).ok,true);await sleep(20);const code=k.latest.code;
   assert.equal((await emit(a,'join',{code,nickname:'A'})).ok,true);assert.equal((await emit(b,'join',{code,nickname:'B'})).ok,true);
   assert.equal((await emit(other,'create',{name:'other',nickname:'O',maxPlayers:3})).ok,true);await sleep(120);
@@ -20,13 +21,13 @@ test('real sockets create/join, validate roles, move, isolate rooms, reconnect a
   assert.equal(a.latest.phase,'playing');assert.equal(other.latest.phase,'lobby');const room=server.game.rooms.get(code),p=room.players.get(a.identity),initial=p.x;
   a.emit('input',{x:1,y:0,space:false});await sleep(180);a.emit('input',{x:0,y:0,space:false});assert.ok(p.x>initial);
   const id=a.identity;a.disconnect();await sleep(40);assert.equal(p.connected,false);const again=await client(aToken);await sleep(120);assert.equal(again.identity,id);assert.equal(p.connected,true);assert.equal(again.latest.phase,'playing');
-  assert.equal((await emit(again,'leave')).ok,true);await sleep(120);assert.equal(again.latest,null);assert.equal(room.players.get(id).status,'out');
+  assert.equal((await emit(again,'leave')).ok,true);await sleep(120);assert.equal(again.latest,null);assert.equal(room.players.get(id).bot,true);
 });
-test('server masks positions outside view, cabinets and bushes; spectator gets followed vision',async t=>{
+test('server masks walls, distance and lockers without making bushes invisibility zones; spectators follow vision',async t=>{
   const {server,client}=await fixture(t),k=await client(),a=await client(),b=await client();await emit(k,'create',{name:'fog',nickname:'K',maxPlayers:3});await sleep(30);const code=k.latest.code;await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});await sleep(120);await emit(k,'start');await sleep(120);
-  const room=server.game.rooms.get(code),killer=room.players.get(k.identity),survivor=room.players.get(a.identity);killer.x=1000;killer.y=1300;survivor.x=2800;survivor.y=2200;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);
+  const room=server.game.rooms.get(code),killer=room.players.get(k.identity),survivor=room.players.get(a.identity);room.map.walls=[];killer.x=1000;killer.y=1300;survivor.x=2800;survivor.y=2200;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);
   survivor.x=1100;survivor.y=1300;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,1100);
-  const bush=room.map.bushes[0];survivor.x=bush.x+50;survivor.y=bush.y+50;killer.x=survivor.x-160;killer.y=survivor.y;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);killer.x=survivor.x-50;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);
+  const bush=room.map.bushes[0];survivor.x=bush.x+50;survivor.y=bush.y+50;killer.x=survivor.x-160;killer.y=survivor.y;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls.push({x:survivor.x-80,y:survivor.y-50,w:15,h:100});await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls=[];killer.x=survivor.x-50;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);
   survivor.hidden=room.map.cabinets[0].id;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);assert.equal(k.latest.map.cabinets[0].occupant,undefined);
   survivor.hidden=null;survivor.status='out';survivor.spectateId=killer.id;await sleep(150);assert.equal(a.latest.viewId,killer.id);assert.notEqual(a.latest.players.find(p=>p.id===killer.id).x,null);
 });
@@ -42,10 +43,10 @@ test('admin can inspect the lobby and full map; regular users retain fog and can
   assert.equal(admin.latest.debug.fullMap,true);assert.equal(admin.latest.phase,'lobby');assert.ok(admin.latest.map.walls.length>60);
   await sleep(120);await emit(admin,'start');await sleep(120);
   const room=server.game.rooms.get(code),p=room.players.get(a.identity),other=room.players.get(b.identity),h=room.map.cabinets[0];
-  p.x=h.x;p.y=h.y;p.hidden=h.id;h.occupant=p.id;other.x=3000;other.y=2200;
+  p.x=h.x;p.y=h.y;p.hidden=h.id;h.occupant=p.id;other.x=4200;other.y=3900;
   await sleep(150);
   assert.equal(admin.latest.players.find(q=>q.id===p.id).x,h.x);assert.equal(admin.latest.map.cabinets[0].occupant,p.id);
-  assert.equal(admin.latest.players.find(q=>q.id===other.id).x,3000);assert.equal(a.latest.players.find(q=>q.id===other.id).x,null);assert.equal(a.latest.map.cabinets[0].occupant,undefined);
+  assert.equal(admin.latest.players.find(q=>q.id===other.id).x,4200);assert.equal(a.latest.players.find(q=>q.id===other.id).x,null);assert.equal(a.latest.map.cabinets[0].occupant,undefined);
   assert.equal((await emit(admin,'debug-view',{fullMap:false})).ok,true);await sleep(120);
   assert.equal(admin.latest.players.find(q=>q.id===p.id).x,null);assert.equal(admin.latest.map.cabinets[0].occupant,undefined);
   await emit(admin,'debug-view',{fullMap:true});await sleep(120);admin.disconnect();await sleep(40);const again=await client(adminToken);await sleep(120);assert.equal(again.latest.debug.fullMap,true);
@@ -79,5 +80,5 @@ test('a short network click attacks once, validated inputs and private skill che
  const room=server.game.rooms.get(code),kp=room.players.get(k.identity),ap=room.players.get(a.identity);kp.x=1600;kp.y=1500;ap.x=1660;ap.y=1500;
  k.emit('input',{attack:true,aimX:100,aimY:0});k.emit('input',{attack:false,aimX:100,aimY:0});await sleep(350);assert.equal(ap.health,1);assert.equal(kp.facing.x,1);assert.equal(kp.carrying,null);
  a.emit('input',{x:Infinity,y:NaN,health:99,status:'escaped'});await sleep(80);assert.equal(ap.health,1);assert.equal(ap.status,'alive');assert.ok(Number.isFinite(ap.x));assert.equal((await emit(a,'loadout',{item:'none',perks:[]})).ok,false);
- room.beginSkill(ap,'hook',null);await sleep(120);assert.ok(a.latest.players.find(p=>p.id===a.identity).skill);assert.equal(b.latest.players.find(p=>p.id===a.identity).skill,null);assert.equal(k.latest.players.find(p=>p.id===a.identity).skill,null);
+ room.beginSkill(ap,'hook',null);await waitFor(()=>a.latest.players.find(p=>p.id===a.identity).skill);assert.ok(a.latest.players.find(p=>p.id===a.identity).skill);assert.equal(b.latest.players.find(p=>p.id===a.identity).skill,null);assert.equal(k.latest.players.find(p=>p.id===a.identity).skill,null);
 });

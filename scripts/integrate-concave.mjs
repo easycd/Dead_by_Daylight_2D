@@ -3,7 +3,9 @@ import path from 'node:path';
 const source=path.resolve(process.cwd()),target=path.resolve(process.argv[2]||'C:/Project/Concave');
 if(target.toLowerCase()!=='c:\\project\\concave')throw new Error('Expected explicitly authorized Concave directory.');
 const dest=path.join(target,'nightfall');await mkdir(dest,{recursive:true});
-for(const item of ['config.js','map.js','game.js','server.js','server.d.ts','public'])await cp(path.join(source,item),path.join(dest,item),{recursive:true});
+const ignorePath=path.join(target,'.gitignore'),ignore=await readFile(ignorePath,'utf8');
+if(!ignore.split(/\r?\n/).includes('.data/nightfall-accounts.json*'))await writeFile(ignorePath,ignore+'\n# Local NIGHTFALL credentials and sessions\n.data/nightfall-accounts.json*\n');
+for(const item of ['config.js','rules.js','bots.js','accounts.js','map.js','game.js','server.js','server.d.ts','public'])await cp(path.join(source,item),path.join(dest,item),{recursive:true});
 const entry=path.join(target,'server/index.ts');let content=await readFile(entry,'utf8');
 if(!content.includes('createNightfall')){
   content=content.replace("import { fileURLToPath } from 'node:url';","import { fileURLToPath, pathToFileURL } from 'node:url';");
@@ -13,5 +15,13 @@ if(!content.includes('createNightfall')){
   content=content.replace('close: () => { clearInterval(interval);','close: () => { clearInterval(interval); nightfall.close();');
   await writeFile(entry,content);
 }
+// Reuse the existing persistent account store without changing Gomoku auth routes.
+if(content.includes('  const nightfall = createNightfall(io);')&&content.includes('  const ready = accounts.init();')){
+  content=content.replace(/  const nightfall = createNightfall\(io\);\r?\n/,'');
+  content=content.replace('  const ready = accounts.init();',`  const ready = accounts.init();
+  const nightfall = createNightfall(io, { accountStore: process.env.DATABASE_URL ? accounts : undefined, ready, allowGuest: options.allowLegacyAuth === true });`);
+}
+content=content.replace('clearInterval(interval); nightfall.close();','clearInterval(interval); await nightfall.close();');
+await writeFile(entry,content);
 await writeFile(path.join(dest,'README.md'),'# NIGHTFALL\n\nGame source copied from C:/Project/DeadByDayLight_2D.\nMounted at /dbd/ on the existing Gomoku HTTP server. Socket.IO namespace: /nightfall.\nRun the source project scripts/integrate-concave.mjs after changes to synchronize these files.\n');
 console.log(`Integrated NIGHTFALL into ${target}; existing Gomoku routes remain at /.`);

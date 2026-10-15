@@ -1,0 +1,1962 @@
+{
+  "mode": "pallet",
+  "records": [
+    {
+      "time": 0,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 0.52,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 1.03,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 1.54,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 2.08,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 2.59,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 3.1,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 3.61,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 4.12,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 4.64,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 5.16,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 5.67,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 6.2,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 6.71,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 7.22,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 7.74,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 8.26,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 8.79,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 9.31,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 9.84,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 10.37,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 10.9,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 11.4,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 11.91,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 12.43,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 12.95,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 13.46,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 13.98,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 14.5,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 15.03,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 15.54,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 16.07,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 16.61,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 17.11,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 17.61,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 18.14,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 18.66,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 19.2,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 19.74,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 20.24,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 20.75,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 21.29,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 21.82,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 22.35,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 22.87,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 23.39,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 23.92,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 24.44,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 24.97,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 25.49,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 26.01,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 26.53,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 27.03,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 27.55,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 28.05,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 28.58,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 29.11,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 29.65,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 30.18,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "ready"
+    },
+    {
+      "time": 30.71,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 1.74,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 31.24,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 1.21,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 31.79,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0.66,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 32.32,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0.13,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 32.85,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 33.38,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 33.89,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 34.42,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 34.94,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 35.48,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 35.99,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 36.53,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 37.06,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 37.6,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 38.12,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    },
+    {
+      "time": 38.63,
+      "gap": 90,
+      "human": {
+        "x": 2573.8,
+        "y": 1328.9,
+        "health": 2,
+        "status": "alive"
+      },
+      "opponent": {
+        "health": 2,
+        "status": "alive",
+        "stun": 0,
+        "cooldown": 0
+      },
+      "generators": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pallet": "dropped"
+    }
+  ],
+  "events": [
+    {
+      "id": "d279934c-a091-4853-b71d-1a99f3a08b55",
+      "text": "추격 시작 · 발전기 5개를 수리하세요.",
+      "time": 0
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "scope": "Controlled scenarios, not human match win rates. Geometry distances are straight line, not navigation paths.",
+  "baseline": {
+    "survivorRunMetersPerSec": 4,
+    "killerMetersPerSec": 4.6,
+    "mapMeters": [
+      104,
+      96
+    ],
+    "walkMetersPerSec": 2.2588235294117647,
+    "attackRangeMeters": 2.35,
+    "hitBoostSeconds": 1.8,
+    "hitRecoverySeconds": 2.7,
+    "recoveryTravelMeters": 2.72,
+    "equalWorkLowerBoundSeconds": 112.5
+  },
+  "straightChase": {
+    "running": {
+      "firstHitSeconds": 3.37,
+      "downSeconds": 24.07,
+      "maxGapAfterHitMeters": 14.98
+    },
+    "walking": {
+      "firstHitSeconds": 1.37,
+      "downSeconds": 8.67,
+      "maxGapAfterHitMeters": 13.29
+    }
+  },
+  "repairNoSkillsSeconds": [
+    {
+      "workers": 1,
+      "seconds": 90.03
+    },
+    {
+      "workers": 2,
+      "seconds": 52.97
+    },
+    {
+      "workers": 3,
+      "seconds": 42.87
+    },
+    {
+      "workers": 4,
+      "seconds": 40.93
+    }
+  ],
+  "injuredWindowGrab": {
+    "distanceMeters": 2,
+    "visible": true,
+    "vaultSeconds": 0.5,
+    "result": "carried"
+  },
+  "pallet": {
+    "state": "dropped",
+    "killerStunSeconds": 2,
+    "distanceFromCenterPixels": 45
+  },
+  "layouts": {
+    "count": 40,
+    "palletCount": {
+      "min": 15,
+      "mean": 15,
+      "max": 15
+    },
+    "windowCount": {
+      "min": 10,
+      "mean": 14,
+      "max": 17
+    },
+    "genToPalletMeters": {
+      "min": 1.53,
+      "mean": 12.63,
+      "max": 28.9
+    },
+    "genToHookMeters": {
+      "min": 3.14,
+      "mean": 15.77,
+      "max": 40.27
+    },
+    "spawnToGenMeters": {
+      "min": 2.98,
+      "mean": 16.29,
+      "max": 33.9
+    },
+    "killerToSpawnMeters": {
+      "min": 20.12,
+      "mean": 56.11,
+      "max": 102.6
+    }
+  }
+}
