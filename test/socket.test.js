@@ -8,11 +8,58 @@ async function waitFor(predicate){const deadline=Date.now()+2000;while(!predicat
 const emitRaw=(s,event,data={})=>new Promise((resolve,reject)=>s.timeout(2000).emit(event,data,(e,r)=>e?reject(e):resolve(r)));
 // Combat fixtures explicitly select teams after entering the new waiting area.
 async function emit(s,event,data={}){const reply=await emitRaw(s,event,data);if(reply?.ok&&['create','join'].includes(event)){await sleep(110);await emitRaw(s,'role',{role:event==='create'?'killer':'survivor'});await sleep(110);}return reply;}
-async function fixture(t){const server=createStandaloneServer({allowGuest:true});await new Promise(resolve=>server.http.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.http.address().port}`,clients=[];
+async function fixture(t,options={}){const server=createStandaloneServer({allowGuest:true,...options});await new Promise(resolve=>server.http.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.http.address().port}`,clients=[];
   t.after(async()=>{for(const c of clients)c.disconnect();await server.close();});
   async function client(token=randomUUID()){const s=connect(`${url}/nightfall`,{auth:{token},forceNew:true,transports:['websocket']});s.latest=null;s.identity=null;s.on('state',v=>{s.latest=v?{...v,map:{...s.latest?.map,...v.map}}:null;});s.on('identity',id=>s.identity=id);clients.push(s);await new Promise((resolve,reject)=>{s.once('connect',resolve);s.once('connect_error',reject);});return s;}
   return {server,url,client};
 }
+
+test('feedback sends masked proximity and only the watched survivor hit record',async t=>{
+  const {server,url,client}=await fixture(t),k=await client(),a=await client(),b=await client();
+  assert.equal((await fetch(`${url}/dbd/feedback.js`)).status,200);
+  await emit(k,'create',{name:'feedback',nickname:'K',maxPlayers:3});const code=k.latest.code;
+  await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});await emit(k,'start');
+  const room=server.game.rooms.get(code),killer=room.players.get(k.identity),p=room.players.get(a.identity),watcher=room.players.get(b.identity);
+  killer.x=1000;killer.y=1300;p.x=1550;p.y=1300;
+  room.map.walls.push({x:1200,y:1200,w:30,h:200});
+  await waitFor(()=>a.latest.heartbeatDirection===4);
+  assert.equal(a.latest.players.find(q=>q.id===killer.id).x,null);
+  assert.equal(a.latest.heartbeat,1-550/1360);assert.equal(k.latest.heartbeat,0);assert.equal(k.latest.hit,null);
+  room.damage(p);await waitFor(()=>a.latest.hit?.sequence===1);
+  assert.equal(a.latest.hit.time,p.lastHitAt);assert.equal(a.latest.players.some(q=>'hitSequence' in q),false);
+  watcher.status='out';watcher.spectateId=p.id;
+  await waitFor(()=>b.latest.viewId===p.id);assert.deepEqual(b.latest.hit,a.latest.hit);
+  watcher.spectateId=killer.id;await waitFor(()=>b.latest.viewId===killer.id);assert.equal(b.latest.heartbeat,0);assert.equal(b.latest.hit,null);
+  killer.status='out';await waitFor(()=>a.latest.heartbeat===0);assert.equal(a.latest.heartbeatDirection,null);
+});
+
+test('private positions and locker IDs stay hidden; refresh preserves the connection and stale input expires',async t=>{
+  const {server,client}=await fixture(t),k=await client(),a=await client(),b=await client();
+  await emit(k,'create',{name:'privacy',nickname:'K',maxPlayers:3});const code=k.latest.code;
+  await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});await emit(k,'start');
+  const room=server.game.rooms.get(code),p=room.players.get(a.identity),killer=room.players.get(k.identity),l=room.map.cabinets[0];
+  l.x=1500;l.y=1500;l.occupant=p.id;p.x=l.x;p.y=l.y;p.hidden=l.id;p.afkOrigin={x:p.x,y:p.y};p.lockerTransition={id:l.id,type:'exit',remaining:20};p.palletDrop={id:'secret-pallet',until:room.elapsed+30};killer.x=1000;killer.y=1500;
+  await waitFor(()=>a.latest.players.find(q=>q.id===a.identity)?.hidden===l.id);
+  const masked=k.latest.players.find(q=>q.id===a.identity);assert.equal(masked.x,null);assert.equal(masked.hidden,null);assert.equal(masked.palletDrop,null);
+  assert.equal('afkOrigin' in masked,false);assert.equal('lockerTransition' in masked,false);assert.equal(k.latest.map.hatch.x,null);assert.equal('item' in k.latest.map.chests[0],false);
+  await sleep(110);const socketId=a.id;let disconnected=false;a.once('disconnect',()=>disconnected=true);
+  assert.equal((await emitRaw(a,'directory:refresh')).ok,true);assert.equal(a.id,socketId);assert.equal(disconnected,false);
+  p.input={x:1,y:0,aimX:1,aimY:0,work:true};p.pendingPress.add('attack');p.lastInputAt=Date.now()-3000;
+  await waitFor(()=>p.lastInputAt===null);assert.equal(p.input.x,0);assert.equal(p.pendingPress.size,0);
+});
+
+test('debug nickname cannot grant full-map access when local debugging is disabled',async t=>{
+  const {client}=await fixture(t,{allowLocalDebug:false}),admin=await client();
+  await emit(admin,'create',{name:'production',nickname:'admin',maxPlayers:3});
+  assert.equal(admin.latest.debug.enabled,false);assert.equal((await emitRaw(admin,'debug-view',{fullMap:true})).ok,false);
+});
+
+test('normal shutdown permits client reconnection and can be closed more than once',async t=>{
+  const {server,client}=await fixture(t),s=await client();
+  const disconnected=new Promise(resolve=>s.once('disconnect',resolve));
+  await server.close();const reason=await disconnected;
+  assert.notEqual(reason,'io server disconnect');assert.equal(s.active,true);s.disconnect();await server.close();
+});
 test('real sockets create/join, validate roles, move, isolate rooms, reconnect and serve assets',async t=>{
   const {server,url,client}=await fixture(t),k=await client(),aToken=randomUUID(),a=await client(aToken),b=await client(),other=await client();
   assert.equal((await fetch(`${url}/dbd/api/health`)).status,200);assert.match(await (await fetch(`${url}/dbd/`)).text(),/데바데2D/);assert.equal((await fetch(`${url}/dbd/no-file`)).status,404);assert.equal((await fetch(`${url}/dbd/skill-check.js`)).status,200);

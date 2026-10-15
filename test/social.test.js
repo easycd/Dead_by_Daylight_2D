@@ -94,3 +94,12 @@ test('finished match transfers host, resets, and reconnect removes duplicate pre
   await new Promise((r,j)=>{again.once('connect',r);again.once('connect_error',j);});await waitFor(()=>state?.code===code&&people.length===2);
   assert.equal(b.connected,false);assert.equal(people.filter(p=>p.id===b.account.id).length,1);assert.ok(state.players.find(p=>p.accountId===b.account.id).connected);
 });
+
+test('an unexpired lobby invitation is restored after the recipient reconnects',async t=>{
+  const {client}=await fixture(t),a=await client('InviteHost'),b=await client('InviteGuest');
+  await emit(a,'create',{name:'invite recovery',maxPlayers:3});await waitFor(()=>a.state?.code);
+  assert.equal((await emit(a,'social:invite',{targetId:b.account.id})).ok,true);await waitFor(()=>b.invite);
+  const id=b.invite.id;b.disconnect();b.invite=null;b.connect();
+  await waitFor(()=>b.invite?.id===id);assert.equal(b.invite.code,a.state.code);
+  assert.equal((await emit(b,'social:accept',{id})).ok,true);await waitFor(()=>b.state?.code===a.state.code);
+});

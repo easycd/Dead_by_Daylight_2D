@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,unlink,rmdir} from 'node:fs/promises';
+import {mkdtemp,readFile,writeFile,unlink,rmdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {io} from 'socket.io-client';
 import {FileAccounts,credentials,colors} from '../accounts.js';
-import {createStandaloneServer} from '../server.js';
+import {createStandaloneServer,handleNightfallRequest} from '../server.js';
 
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function temp(t){const dir=await mkdtemp(path.join(tmpdir(),'nightfall-auth-test-')),file=path.join(dir,'accounts.json');t.after(async()=>{await unlink(file).catch(()=>{});await rmdir(dir);});return file;}
@@ -71,4 +71,22 @@ test('authentication mutation requires CSRF request header and excessive attempt
   for(let i=0;i<12;i++)assert.equal((await post(url,'auth/login',{nickname:'X',password:'bad'})).status,400);
   assert.equal((await post(url,'auth/login',{nickname:'X',password:'bad'})).status,429);
   assert.equal((await post(url,'auth/login',{nickname:'Another',password:'bad'})).status,400);
+});
+
+test('older local account files without profiles remain usable without losing account data',async t=>{
+  const file=await temp(t);await writeFile(file,JSON.stringify({users:[{id:'old-user',nickname:'OldUser'}],sessions:[]}));
+  const store=new FileAccounts(file);await store.init();assert.equal((await store.getProfile('old-user')).survivorColor,'#657f62');
+  await store.saveProfile('old-user',{survivorColor:'#123456',killerColor:'#abcdef'});
+  const saved=JSON.parse(await readFile(file,'utf8'));assert.equal(saved.users[0].nickname,'OldUser');assert.equal(saved.profiles['old-user'].killerColor,'#abcdef');
+});
+
+test('oversized requests and invalid URLs return errors, and auth tracking stays bounded',async t=>{
+  const file=await temp(t),{server,url}=await start(file);t.after(()=>server.close());
+  assert.equal((await post(url,'auth/login',{nickname:'Large',password:'x'.repeat(3000)})).status,413);
+  const invalidOrigin=await fetch(url+'/dbd/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json','X-Nightfall-Request':'1',Origin:'null'},body:JSON.stringify({nickname:'Player',password:'test-password'})});assert.equal(invalidOrigin.status,403);
+  const attempts=server.game.auth.attempts;for(let i=0;i<5001;i++)attempts.set('fixture:'+i,{start:Date.now(),count:1});
+  assert.equal((await post(url,'auth/login',{nickname:'X',password:'short'})).status,400);assert.ok(attempts.size<=5000);
+  let status,body;await handleNightfallRequest({url:'http://[',socket:{}},{writeHead:n=>status=n,end:v=>body=v});
+  assert.equal(status,400);assert.match(body,/Invalid/);
+  assert.equal((await fetch(url+'/dbd/api/health')).status,200);
 });

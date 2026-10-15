@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
-    "check": "node --check server.js && node --check game.js && node --check public/app.js && node --check public/debug.js && node --check public/chat.js && node --check map.js && node --check public/scene.js && node --check public/audio.js && node --check rules.js && node --check public/skill-check.js && node --check accounts.js && node --check public/account.js && node --check social.js && node --check public/social.js"
+    "check": "node --check server.js && node --check game.js && node --check public/app.js && node --check public/debug.js && node --check public/chat.js && node --check map.js && node --check public/scene.js && node --check public/audio.js && node --check public/feedback.js && node --check rules.js && node --check public/skill-check.js && node --check accounts.js && node --check public/account.js && node --check social.js && node --check public/social.js && node --check bots.js && node --check config.js && node --check scripts/integrate-concave.mjs && node --check scripts/balance-playtest.mjs"
   },
   "engines": {
     "node": ">=20"

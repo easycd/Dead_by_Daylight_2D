@@ -23,8 +23,8 @@ function scenario(name){
     opponent.x=cx-(p.axis==='x'?45:0);opponent.y=cy-(p.axis==='y'?45:0);
   }
   mode=name;started=room.elapsed;records=[];
-  // Reconnect normally so the client receives the full seeded layout.
-  for(const socket of server.game.namespace.sockets.values())socket.disconnect(true);
+  // Keep the authenticated connection while sending the full seeded layout.
+  server.game.syncRoom(room,true);
   return {mode,seed:room.map.seed,human:{x:human.x,y:human.y},opponent:{x:opponent.x,y:opponent.y}};
 }
 const control=setInterval(()=>{
