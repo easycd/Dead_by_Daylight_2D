@@ -9,7 +9,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const emit=(s,event,data={})=>new Promise((resolve,reject)=>s.timeout(3000).emit(event,data,(e,r)=>e?reject(e):resolve(r)));
 async function waitFor(fn){for(let n=0;n<100;n++){if(fn())return;await pause(20);}throw new Error('Socket update not received');}
 async function fixture(t){
-  const dir=await mkdtemp(path.join(tmpdir(),'nightfall-social-')),file=path.join(dir,'accounts.json'),run=createStandaloneServer({dataFile:file}),clients=[];
+  const dir=await mkdtemp(path.join(tmpdir(),'nightfall-social-')),file=path.join(dir,'accounts.json'),run=createStandaloneServer({loadingSeconds:0,dataFile:file}),clients=[];
   const identity=await run.game.ready;await new Promise(r=>run.http.listen(0,'127.0.0.1',r));
   t.after(async()=>{clients.forEach(s=>s.disconnect());await run.close();await unlink(file);await rmdir(dir);});
   const url='http://127.0.0.1:'+run.http.address().port;

@@ -1,5 +1,9 @@
 # 데바데2D — 어둠 속의 추격
 
+원작 배치의 경기 HUD·특전/상태 효과·경기 상세·빠른 메시지 이식은 [HUD_PORT_2026-10-16.md](HUD_PORT_2026-10-16.md)를 참고하세요. TAB으로 경기 상세, C/휠 버튼으로 빠른 메시지를 열 수 있습니다.
+
+입력·충돌·시야 회전·10초 시작 준비·HUD 개선과 검증 결과는 [PLAYABILITY_AUDIT_2026-10-16.md](PLAYABILITY_AUDIT_2026-10-16.md)를 참고하세요.
+
 현재 규칙·시야·팀 HUD 변경은 [REFERENCE_ALIGNMENT_2026-10-16.md](REFERENCE_ALIGNMENT_2026-10-16.md)를 우선 참고하세요. 아래 날짜별 기록에는 변경 전 설계도 포함됩니다.
 
 진행 상황과 심장박동·피격 효과, 프레임 최적화 기록은 [NEXT_WORK.md](NEXT_WORK.md), 최신 전수 점검 결과는 [PROJECT_AUDIT_2026-10-15.md](PROJECT_AUDIT_2026-10-15.md)를 확인하세요.

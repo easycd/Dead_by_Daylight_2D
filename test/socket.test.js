@@ -8,11 +8,37 @@ async function waitFor(predicate){const deadline=Date.now()+2000;while(!predicat
 const emitRaw=(s,event,data={})=>new Promise((resolve,reject)=>s.timeout(2000).emit(event,data,(e,r)=>e?reject(e):resolve(r)));
 // Combat fixtures explicitly select teams after entering the new waiting area.
 async function emit(s,event,data={}){const reply=await emitRaw(s,event,data);if(reply?.ok&&['create','join'].includes(event)){await sleep(110);await emitRaw(s,'role',{role:event==='create'?'killer':'survivor'});await sleep(110);}return reply;}
-async function fixture(t,options={}){const server=createStandaloneServer({allowGuest:true,...options});await new Promise(resolve=>server.http.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.http.address().port}`,clients=[];
+async function fixture(t,options={}){const server=createStandaloneServer({loadingSeconds:0,allowGuest:true,...options});await new Promise(resolve=>server.http.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.http.address().port}`,clients=[];
   t.after(async()=>{for(const c of clients)c.disconnect();await server.close();});
   async function client(token=randomUUID()){const s=connect(`${url}/nightfall`,{auth:{token},forceNew:true,transports:['websocket']});s.latest=null;s.identity=null;s.on('state',v=>{s.latest=v?{...v,map:{...s.latest?.map,...v.map}}:null;});s.on('identity',id=>s.identity=id);clients.push(s);await new Promise((resolve,reject)=>{s.once('connect',resolve);s.once('connect_error',reject);});return s;}
   return {server,url,client};
 }
+
+test('server countdown rejects gameplay input, cancels on disconnect, then starts everyone after ten seconds',async t=>{
+  const {server,client}=await fixture(t,{loadingSeconds:10}),k=await client(),a=await client(),token=randomUUID(),b=await client(token);
+  await emit(k,'create',{name:'loading',nickname:'K',maxPlayers:3});const code=k.latest.code;await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});await emit(k,'start');
+  await waitFor(()=>a.latest.phase==='loading');const room=server.game.rooms.get(code),p=room.players.get(a.identity),x=p.x;
+  a.emit('input',{x:1,y:0,space:true,attack:true,work:true});await sleep(150);assert.equal(room.elapsed,0);assert.equal(p.x,x);assert.equal(p.pendingPress.size,0);assert.ok(a.latest.loadingRemaining>9);
+  b.disconnect();await waitFor(()=>k.latest.phase==='lobby');const again=await client(token);await waitFor(()=>room.players.get(again.identity)?.connected);await sleep(120);
+  assert.equal((await emit(k,'start')).ok,true);await waitFor(()=>k.latest.phase==='loading');const start=performance.now();await sleep(9700);assert.equal(room.phase,'loading');await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Countdown did not finish')),2000);k.on('state',s=>{if(s.phase==='playing'){clearTimeout(timer);resolve();}});});
+  assert.ok(performance.now()-start>=9800);assert.equal(room.loadingRemaining,0);assert.equal(p.input.x,0);assert.ok(room.elapsed<.3);
+});
+
+test('trial UI assets, allied loadouts, chase identity and quick messages remain viewer scoped',async t=>{
+  const {server,url,client}=await fixture(t),k=await client(),a=await client(),b=await client();
+  for(const file of ['marker-layout.js','trial-hud.js','hud-model.js','hud-icons.js','hud.css'])assert.equal((await fetch(`${url}/dbd/${file}`)).status,200);
+  await emit(k,'create',{name:'trial HUD',nickname:'K',maxPlayers:3});const code=k.latest.code;await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});
+  await sleep(110);await emit(a,'loadout',{perks:['engineer'],item:'toolbox'});await sleep(110);await emit(k,'loadout',{perks:['tracker'],item:'none'});await sleep(110);await emit(k,'start');
+  await waitFor(()=>a.latest.phase==='playing');const r=server.game.rooms.get(code);
+  assert.equal(a.latest.trial.players.find(p=>p.id===k.identity).loadout,null);assert.deepEqual(k.latest.players.find(p=>p.id===a.identity).perks,[]);
+  assert.deepEqual(b.latest.trial.players.find(p=>p.id===a.identity).loadout.perks,['engineer']);
+  await sleep(110);assert.equal((await emit(a,'intent',{index:0})).ok,true);await waitFor(()=>b.latest.intents.length===1);assert.equal(k.latest.intents.length,0);
+  await sleep(110);assert.equal((await emit(k,'intent',{index:0})).ok,false);
+  const player=r.players.get(a.identity);player.status='out';r.players.get(k.identity).chaseTarget=a.identity;server.game.syncRoom(r);await waitFor(()=>a.latest.intents.length===0);
+  await sleep(110);assert.equal((await emit(a,'intent',{index:1})).ok,false);
+  r.phase='finished';r.result={winner:'individual',reason:'test',escaped:0};server.game.syncRoom(r,true);await waitFor(()=>a.latest.trial.players.find(p=>p.id===k.identity)?.loadout!==null);
+  assert.deepEqual(a.latest.trial.players.find(p=>p.id===k.identity).loadout.perks,['tracker']);
+});
 
 test('team activity crosses fog without position leaks; aura items and window blocks remain viewer scoped',async t=>{
   const {server,client}=await fixture(t),k=await client(),a=await client(),b=await client();

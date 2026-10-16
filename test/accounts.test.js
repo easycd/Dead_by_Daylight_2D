@@ -10,7 +10,7 @@ import {createStandaloneServer,handleNightfallRequest} from '../server.js';
 
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function temp(t){const dir=await mkdtemp(path.join(tmpdir(),'nightfall-auth-test-')),file=path.join(dir,'accounts.json');t.after(async()=>{await unlink(file).catch(()=>{});await rmdir(dir);});return file;}
-async function start(file){const server=createStandaloneServer({dataFile:file});await server.game.ready;await new Promise(r=>server.http.listen(0,'127.0.0.1',r));return {server,url:'http://127.0.0.1:'+server.http.address().port};}
+async function start(file){const server=createStandaloneServer({loadingSeconds:0,dataFile:file});await server.game.ready;await new Promise(r=>server.http.listen(0,'127.0.0.1',r));return {server,url:'http://127.0.0.1:'+server.http.address().port};}
 async function post(url,route,body,cookie){const response=await fetch(url+'/dbd/api/'+route,{method:'POST',headers:{'Content-Type':'application/json','X-Nightfall-Request':'1',...(cookie?{Cookie:cookie}:{})},body:JSON.stringify(body)});return {status:response.status,data:await response.json(),cookie:response.headers.get('set-cookie')?.split(';')[0]};}
 async function connect(url,cookie){const s=io(url+'/nightfall',{forceNew:true,transports:['websocket'],extraHeaders:{Cookie:cookie}});await new Promise((r,j)=>{s.once('connect',r);s.once('connect_error',j);});return s;}
 const emit=(s,event,data)=>new Promise((r,j)=>s.timeout(5000).emit(event,data,(e,v)=>e?j(e):r(v)));

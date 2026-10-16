@@ -46,7 +46,7 @@ export async function integrateConcave(targetPath){
   const content=prepareServer(original);
   let ignore='';try{ignore=await readFile(ignorePath,'utf8');}catch(error){if(error.code!=='ENOENT')throw error;}
   const dest=path.join(target,'nightfall');await mkdir(dest,{recursive:true});
-  for(const item of ['config.js','rules.js','team-activity.js','bots.js','social.js','accounts.js','map.js','game.js','server.js','server.d.ts','public'])await cp(path.join(source,item),path.join(dest,item),{recursive:true});
+  for(const item of ['trial-ui.js','config.js','rules.js','team-activity.js','bots.js','social.js','accounts.js','map.js','game.js','server.js','server.d.ts','public'])await cp(path.join(source,item),path.join(dest,item),{recursive:true});
   if(!ignore.split(/\r?\n/).some(line=>['.data/','.data/nightfall-accounts.json*'].includes(line)))await writeFile(ignorePath,ignore+'\n# Local NIGHTFALL credentials and sessions\n.data/nightfall-accounts.json*\n');
   await writeFile(entry,content);
   await writeFile(path.join(dest,'README.md'),`# NIGHTFALL
