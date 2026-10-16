@@ -82,10 +82,10 @@ test('camping range is 16m, scales with proximity and applies grace to every hoo
   advance(r,1.6);assert.equal(b.status,'caged');assert.ok(a.hookedAt>=31.4);
 });
 
-test('wiggle fills automatically in 16 seconds, preserves progress on drop and adds 25%',()=>{
-  const {r,k,a}=setup();k.carrying=a.id;a.status='carried';a.health=0;
-  advance(r,8);assert.ok(a.wiggle>=7.99);r.dropCarried(k);assert.equal(a.status,'down');assert.ok(a.wiggle>=11.99);
-  k.carrying=a.id;a.status='carried';advance(r,4.1);assert.equal(a.status,'alive');assert.equal(k.carrying,null);assert.ok(k.stun>0);
+test('wiggle requires success, preserves progress on drop and adds 25%',()=>{
+ const {r,k,a}=setup();r.carry(k,a);advance(r,17);assert.equal(a.status,'carried');assert.equal(a.wiggle,0);
+ a.skill=null;r.beginSkill(a,'wiggle',null);r.elapsed=a.skill.start+a.skill.duration*.06;r.skill(a);assert.equal(a.wiggleActive,true);
+ advance(r,.5);assert.ok(a.wiggle>.49);r.dropCarried(k);assert.equal(a.status,'down');assert.ok(a.wiggle>=4.49);assert.equal(a.wiggleActive,false);
 });
 
 test('downed survivors can escape via gates and hatch; hatch closes after escape',()=>{
@@ -97,9 +97,9 @@ test('downed survivors can escape via gates and hatch; hatch closes after escape
 
 test('key opens a closed hatch, dropped items retain charge and a map consumes charges',()=>{
   const {r,a}=setup(),h=r.map.hatch;h.visible=true;h.open=false;a.x=h.x;a.y=h.y;a.itemType='key';a.itemCharge=5;a.input.item=true;
-  advance(r,2.6);assert.equal(a.status,'escaped');assert.equal(a.itemCharge,0);
+  advance(r,2.6);assert.equal(a.status,'escaped');assert.equal(a.itemCharge,4);
   const q=setup();q.a.itemType='map';q.a.itemCharge=12;q.r.dropItem(q.a);assert.equal(q.r.map.items[0].charge,12);assert.equal(q.a.itemType,'none');
-  q.a.input.work=true;advance(q.r,.1);assert.equal(q.a.itemType,'map');q.a.input.work=false;q.a.input.item=true;advance(q.r,.2);assert.ok(q.a.itemCharge<12);assert.equal(q.a.mapReading,true);
+  q.a.input.work=true;advance(q.r,.1);assert.equal(q.a.itemType,'map');q.a.input.work=false;q.a.input.item=true;advance(q.r,2.1);assert.equal(q.a.itemCharge,11);assert.equal(q.a.mapReading,true);advance(q.r,1);assert.equal(q.a.itemCharge,11);
 });
 
 test('toolbox sabotages a hook temporarily and five totems can be cleansed',()=>{

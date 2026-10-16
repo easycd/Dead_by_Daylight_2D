@@ -17,7 +17,7 @@ test('flashlight works while walking and uses mouse aim instead of movement faci
 
 test('a moving survivor can read a map or use a flashlight without being forced to mend',()=>{
   const {r,a}=setup();a.input.x=1;a.input.item=true;a.deepWound=10;a.itemType='map';a.itemCharge=5;
-  r.interact(a,.1,false);assert.equal(a.mapReading,true);assert.equal(a.itemCharge,4.9);assert.equal(a.task,null);
+  r.interact(a,.1,false);assert.equal(a.task.key,'read-map');assert.equal(a.itemCharge,5);assert.equal(a.deepWound,10);
   a.itemType='flashlight';r.interact(a,.1,false);assert.equal(a.flashlight,true);assert.equal(a.task,null);
   a.input.item=false;a.input.work=true;r.interact(a,.1,false);assert.equal(a.task.key,'mend');
 });

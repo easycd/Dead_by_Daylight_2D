@@ -20,6 +20,8 @@ test('integration accepts an explicit project path and is repeatable with awaite
   assert.equal(await integrateConcave(target),target);
   const first=await readFile(path.join(target,'server/index.ts'),'utf8');assert.match(first,/close: async/);assert.match(first,/await nightfall.close\(\)/);assert.match(first,/allowGuest: false/);
   assert.ok((await readFile(path.join(target,'nightfall/public/feedback.js'),'utf8')).includes('createFeedback'));
+  assert.match(await readFile(path.join(target,'nightfall/team-activity.js'),'utf8'),/export function teamActivity/);
+  assert.match(await readFile(path.join(target,'nightfall/public/vision.js'),'utf8'),/export function canSee/);
   await integrateConcave(target);assert.equal(await readFile(path.join(target,'server/index.ts'),'utf8'),first);
 });
 

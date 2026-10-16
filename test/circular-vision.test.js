@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createScene} from '../public/scene.js';
-test('vision draws a radial circle without wall-dependent clipping; floor never draws roads',()=>{
- const calls=[],fogCalls=[],make=(log)=>new Proxy({canvas:{width:1280,height:720},getTransform:()=>({a:1,d:1,e:0,f:0}),createRadialGradient:(...args)=>{log.push(['gradient',...args]);return {addColorStop(){}};}},{get:(o,k)=>k in o?o[k]:(...args)=>log.push([k,...args])});
- const ctx=make(calls),fc=make(fogCalls),oldDocument=globalThis.document,oldMatch=globalThis.matchMedia;
- globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>fc})};globalThis.matchMedia=()=>({matches:false});
- try{const scene=createScene(ctx),base={width:4000,height:4000,zones:[],decor:[],paths:[{x:123,y:456,w:789,h:42}],walls:[]};scene.floor(base);assert.equal(calls.some(c=>c[0]==='roundRect'&&c[1]===123),false);const view={x:1000,y:1000},camera={x:1000,y:1000};scene.visibility(base,view,camera,1280,720,600);const clear=structuredClone(fogCalls);fogCalls.length=0;scene.visibility({...base,walls:[{x:1010,y:900,w:25,h:200}]},view,camera,1280,720,600);assert.deepEqual(fogCalls,[]);assert.equal(calls.filter(c=>c[0]==='drawImage').length,2);scene.visibility(base,view,camera,1280,720,601);assert.ok(fogCalls.some(c=>c[0]==='gradient'));assert.deepEqual(clear.find(c=>c[0]==='arc'),['arc',640,360,600,0,Math.PI*2]);assert.equal(clear.some(c=>c[0]==='lineTo'),false);}
- finally{globalThis.document=oldDocument;globalThis.matchMedia=oldMatch;}
+import {canSee,visionPolygon,viewFov} from '../public/vision.js';
+import {CONFIG as C} from '../config.js';
+test('directional vision excludes rear and range, respects walls, and uses role FOV',()=>{
+ const view={x:1000,y:1000,role:'survivor',facing:{x:1,y:0}},map={walls:[]};
+ assert.ok(canSee(map,view,{x:1200,y:1000},C));assert.equal(canSee(map,view,{x:900,y:1000},C),false);assert.equal(canSee(map,view,{x:1500,y:1000},C),false);
+ map.walls=[{x:1100,y:950,w:24,h:100}];assert.equal(canSee(map,view,{x:1200,y:1000},C),false);assert.ok(canSee(map,view,{x:1080,y:1000},C));
+ view.facing={x:-1,y:0};assert.ok(canSee(map,view,{x:900,y:1000},C));assert.equal(canSee(map,view,{x:1080,y:1000},C),false);
+ assert.ok(viewFov({role:'survivor'},C)>viewFov({role:'killer'},C));
+});
+test('vision mask follows wall edges and never opens the rear hemisphere',()=>{
+ const view={x:1000,y:1000,role:'survivor',facing:{x:1,y:0}},map={walls:[{x:1100,y:950,w:24,h:100}]};
+ const points=visionPolygon(map,view,400,viewFov(view,C));assert.ok(points.length>60);assert.ok(points.every(p=>p.x>=view.x));
+ const center=points.find(p=>Math.abs(p.delta)<1e-8);assert.ok(center);assert.equal(center.x,1100);assert.ok(points.some(p=>Math.hypot(p.x-view.x,p.y-view.y)>390));
 });

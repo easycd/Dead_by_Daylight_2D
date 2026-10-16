@@ -14,6 +14,23 @@ async function fixture(t,options={}){const server=createStandaloneServer({allowG
   return {server,url,client};
 }
 
+test('team activity crosses fog without position leaks; aura items and window blocks remain viewer scoped',async t=>{
+  const {server,client}=await fixture(t),k=await client(),a=await client(),b=await client();
+  await emit(k,'create',{name:'HUD',nickname:'K',maxPlayers:3});const code=k.latest.code;
+  await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});await emit(k,'start');
+  const r=server.game.rooms.get(code),p=r.players.get(a.identity),watch=r.players.get(b.identity),killer=r.players.get(k.identity);
+  r.map.walls=[];r.map.windows=[];r.map.pallets=[];r.map.cabinets=[];r.map.cages=[];r.map.totems=[];r.map.items=[];r.map.chests=[];
+  p.x=1000;p.y=1000;watch.x=2200;watch.y=1000;killer.x=3500;killer.y=3500;
+  const g=r.map.generators[0];g.x=p.x;g.y=p.y;g.progress=45;p.input.work=true;
+  p.vaultCounts.privateWindow={blockedUntil:r.elapsed+30};r.beacons=[{id:'beam',x:1000,y:1000,expires:r.elapsed+20}];
+  await waitFor(()=>b.latest.players.find(q=>q.id===p.id)?.teamActivity?.type==='repair');
+  const teammate=b.latest.players.find(q=>q.id===p.id);assert.equal(teammate.x,null);assert.equal(teammate.action,null);assert.ok(teammate.teamActivity.progress>=.5);assert.deepEqual(Object.keys(teammate.teamActivity).sort(),['chased','progress','type']);
+  assert.equal(k.latest.players.find(q=>q.id===p.id).teamActivity,null);assert.equal(k.latest.players.find(q=>q.id===p.id).hookStage,null);
+  await waitFor(()=>a.latest.windowBlocks.some(w=>w.id==='privateWindow'));assert.deepEqual(b.latest.windowBlocks,[]);assert.equal(k.latest.beacons.length,0);assert.equal(b.latest.beacons.length,1);
+  watch.keyAuraUntil=r.elapsed+9;await waitFor(()=>b.latest.players.find(q=>q.id===p.id).x===1000);
+  watch.keyAuraUntil=0;p.input.work=false;await waitFor(()=>b.latest.players.find(q=>q.id===p.id).teamActivity?.type==='idle');assert.equal(b.latest.players.find(q=>q.id===p.id).x,null);
+});
+
 test('feedback sends masked proximity and only the watched survivor hit record',async t=>{
   const {server,url,client}=await fixture(t),k=await client(),a=await client(),b=await client();
   assert.equal((await fetch(`${url}/dbd/feedback.js`)).status,200);
@@ -22,7 +39,7 @@ test('feedback sends masked proximity and only the watched survivor hit record',
   const room=server.game.rooms.get(code),killer=room.players.get(k.identity),p=room.players.get(a.identity),watcher=room.players.get(b.identity);
   killer.x=1000;killer.y=1300;p.x=1550;p.y=1300;
   room.map.walls.push({x:1200,y:1200,w:30,h:200});
-  await waitFor(()=>a.latest.heartbeatDirection===4);
+  await waitFor(()=>a.latest.heartbeat===1-550/1360);assert.equal(a.latest.heartbeatDirection,null);
   assert.equal(a.latest.players.find(q=>q.id===killer.id).x,null);
   assert.equal(a.latest.heartbeat,1-550/1360);assert.equal(k.latest.heartbeat,0);assert.equal(k.latest.hit,null);
   room.damage(p);await waitFor(()=>a.latest.hit?.sequence===1);
@@ -72,11 +89,11 @@ test('real sockets create/join, validate roles, move, isolate rooms, reconnect a
   const id=a.identity;a.disconnect();await sleep(40);assert.equal(p.connected,false);const again=await client(aToken);await sleep(120);assert.equal(again.identity,id);assert.equal(p.connected,true);assert.equal(again.latest.phase,'playing');
   assert.equal((await emit(again,'leave')).ok,true);await sleep(120);assert.equal(again.latest,null);assert.equal(room.players.get(id).bot,true);
 });
-test('circular vision ignores wall shadows, masks distance and lockers; spectators follow vision',async t=>{
+test('directional vision hides walls and rear targets; spectators follow vision',async t=>{
   const {server,client}=await fixture(t),k=await client(),a=await client(),b=await client();await emit(k,'create',{name:'fog',nickname:'K',maxPlayers:3});await sleep(30);const code=k.latest.code;await emit(a,'join',{code,nickname:'A'});await emit(b,'join',{code,nickname:'B'});await sleep(120);await emit(k,'start');await sleep(120);
   const room=server.game.rooms.get(code),killer=room.players.get(k.identity),survivor=room.players.get(a.identity);room.map.walls=[];killer.x=1000;killer.y=1300;survivor.x=2800;survivor.y=2200;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);
   survivor.x=1100;survivor.y=1300;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,1100);
-  const bush=room.map.bushes[0];survivor.x=bush.x+50;survivor.y=bush.y+50;killer.x=survivor.x-160;killer.y=survivor.y;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls.push({x:survivor.x-80,y:survivor.y-50,w:15,h:100});await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls=[];killer.x=survivor.x-50;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);
+  const bush=room.map.bushes[0];survivor.x=bush.x+50;survivor.y=bush.y+50;killer.x=survivor.x-160;killer.y=survivor.y;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls.push({x:survivor.x-80,y:survivor.y-50,w:15,h:100});await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);room.map.walls=[];killer.x=survivor.x-50;await sleep(150);assert.notEqual(k.latest.players.find(p=>p.id===a.identity).x,null);
   survivor.hidden=room.map.cabinets[0].id;await sleep(150);assert.equal(k.latest.players.find(p=>p.id===a.identity).x,null);assert.equal(k.latest.map.cabinets[0].occupant,undefined);
   survivor.hidden=null;survivor.status='out';survivor.spectateId=killer.id;await sleep(150);assert.equal(a.latest.viewId,killer.id);assert.notEqual(a.latest.players.find(p=>p.id===killer.id).x,null);
 });

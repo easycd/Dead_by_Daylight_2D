@@ -8,12 +8,12 @@ const survivor={id:'s',role:'survivor',status:'alive',x:0,y:0};
 const killer={role:'killer',status:'alive',x:0,y:0};
 const state=()=>({code:'TEST',phase:'playing',elapsed:1,viewId:'s',players:[{...survivor}],heartbeat:.8,heartbeatDirection:0,hit:{sequence:0,time:null}});
 
-test('terror range is independent of vision and only gives eight directions inside 16m',()=>{
-  for(const [meters,strength,direction] of [[33,0,null],[32,0,null],[24,.25,null],[16,.5,null],[12,.625,0],[8,.75,0],[0,1,0]]){
+test('terror range is independent of vision and never gives killer direction',()=>{
+  for(const [meters,strength,direction] of [[33,0,null],[32,0,null],[24,.25,null],[16,.5,null],[12,.625,null],[8,.75,null],[0,1,null]]){
     assert.deepEqual(terrorCue('playing',survivor,{...killer,x:meters*C.pixelsPerMeter}),{strength,direction});
   }
-  assert.equal(terrorCue('playing',survivor,{...killer,x:500,y:200}).direction,0);
-  assert.equal(terrorCue('playing',survivor,{...killer,x:200,y:500}).direction,2);
+  assert.equal(terrorCue('playing',survivor,{...killer,x:500,y:200}).direction,null);
+  assert.equal(terrorCue('playing',survivor,{...killer,x:200,y:500}).direction,null);
   for(const [phase,view,k] of [['lobby',survivor,killer],['finished',survivor,killer],['playing',killer,killer],['playing',{...survivor,status:'out'},killer],['playing',survivor,{...killer,status:'out'}],['playing',survivor,null]])assert.equal(terrorCue(phase,view,k).strength,0);
 });
 
